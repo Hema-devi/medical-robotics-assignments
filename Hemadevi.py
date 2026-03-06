@@ -1,836 +1,2251 @@
- <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Smart Hospital Robotics Simulation — Project Report</title>
-<style>
-  @import url('https://fonts.cdnfonts.com/css/glacial-indifference');
-
-  :root {
-    --bg: #ede8f5;
-    --surface: #f8f5ff;
-    --surface2: #e8dff7;
-    --accent: #5b21b6;
-    --accent2: #9333ea;
-    --accent3: #059669;
-    --text: #0f0a1e;
-    --muted: #4a3a6e;
-    --border: #cbbff0;
-    --f: 'Glacial Indifference', sans-serif;
-  }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--f);
-    font-size: 15px;
-    line-height: 1.75;
-    min-height: 100vh;
-  }
-
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-    pointer-events: none; z-index: 9999; opacity: 0.4;
-  }
-
-  header {
-    position: relative;
-    padding: 80px 0 60px;
-    overflow: hidden;
-    border-bottom: 1px solid var(--border);
-  }
-
-  header::after {
-    content: '';
-    position: absolute;
-    top: -120px; left: 50%; transform: translateX(-50%);
-    width: 800px; height: 400px;
-    background: radial-gradient(ellipse, rgba(124,58,237,0.13) 0%, transparent 70%);
-    pointer-events: none;
-  }
-
-  .grid-bg {
-    position: absolute; inset: 0;
-    background-image:
-      linear-gradient(rgba(124,58,237,0.07) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(124,58,237,0.07) 1px, transparent 1px);
-    background-size: 40px 40px;
-  }
-
-  .container { max-width: 900px; margin: 0 auto; padding: 0 36px; position: relative; }
-
-  .tag {
-    display: inline-block;
-    font-family: var(--f);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--accent);
-    border: 1px solid rgba(124,58,237,0.35);
-    padding: 4px 12px;
-    border-radius: 2px;
-    margin-bottom: 20px;
-    background: rgba(124,58,237,0.07);
-  }
-
-  h1 {
-    font-family: var(--f);
-    font-size: clamp(36px, 5vw, 58px);
-    font-weight: 700;
-    line-height: 1.1;
-    color: #0f0a1e;
-    margin-bottom: 18px;
-    letter-spacing: 0.01em;
-  }
-
-  h1 span { color: var(--accent); }
-
-  .subtitle {
-    font-size: 14px;
-    color: #4a3a6e;
-    font-family: var(--f);
-    letter-spacing: 0.06em;
-    margin-bottom: 36px;
-  }
-
-  .meta-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 12px;
-    margin-top: 40px;
-  }
-
-  .meta-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    padding: 14px 18px;
-    border-radius: 4px;
-  }
-
-  .meta-card .label {
-    font-family: var(--f);
-    font-size: 9px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: #4a3a6e;
-    margin-bottom: 4px;
-    font-weight: 700;
-  }
-
-  .meta-card .value { font-size: 13px; font-weight: 600; color: #0f0a1e; }
-
-  .toc {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--accent);
-    padding: 28px 32px;
-    border-radius: 4px;
-    margin: 48px 0;
-  }
-
-  .toc-title {
-    font-family: var(--f);
-    font-size: 10px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 16px;
-    font-weight: 700;
-  }
-
-  .toc ol { list-style: none; counter-reset: toc; }
-
-  .toc li {
-    counter-increment: toc;
-    padding: 5px 0;
-    border-bottom: 1px solid rgba(91,33,182,0.10);
-  }
-
-  .toc li:last-child { border-bottom: none; }
-
-  .toc a {
-    color: var(--text);
-    text-decoration: none;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    transition: color 0.2s;
-    font-family: var(--f);
-  }
-
-  .toc a::before {
-    content: counter(toc, decimal-leading-zero);
-    font-family: var(--f);
-    font-size: 11px;
-    color: var(--accent);
-    min-width: 24px;
-    font-weight: 700;
-  }
-
-  .toc a:hover { color: var(--accent); }
-
-  .section { padding: 60px 0; border-bottom: 1px solid var(--border); }
-
-  .section-header { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 32px; }
-
-  .section-num {
-    font-family: var(--f);
-    font-size: 11px;
-    color: var(--accent);
-    padding-top: 8px;
-    letter-spacing: 0.1em;
-    min-width: 28px;
-    font-weight: 700;
-  }
-
-  h2 {
-    font-family: var(--f);
-    font-size: clamp(22px, 3vw, 30px);
-    font-weight: 700;
-    color: #0f0a1e;
-    line-height: 1.2;
-    letter-spacing: 0.02em;
-  }
-
-  h3 {
-    font-family: var(--f);
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--accent);
-    margin: 28px 0 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-  }
-
-  p { color: #2a1a4a; margin-bottom: 16px; font-size: 15px; font-family: var(--f); }
-
-  .highlight {
-    background: linear-gradient(135deg, rgba(91,33,182,0.08), rgba(91,33,182,0.03));
-    border: 1px solid rgba(91,33,182,0.25);
-    padding: 20px 24px;
-    border-radius: 4px;
-    margin: 20px 0;
-  }
-
-  .highlight p { margin: 0; color: var(--text); }
-
-  .component-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
-    margin: 24px 0;
-  }
-
-  .component-card {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    padding: 20px;
-    border-radius: 4px;
-    transition: border-color 0.25s, transform 0.25s;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .component-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: var(--accent);
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 0.25s;
-  }
-
-  .component-card:hover::before { transform: scaleX(1); }
-  .component-card:hover { border-color: rgba(91,33,182,0.45); transform: translateY(-2px); }
-  .component-card .card-icon { font-size: 22px; margin-bottom: 10px; display: block; }
-  .component-card .card-title { font-size: 13px; font-weight: 700; color: #0f0a1e; margin-bottom: 6px; font-family: var(--f); }
-  .component-card .card-desc { font-size: 12px; color: #3d2a60; line-height: 1.5; font-family: var(--f); }
-
-  .code-block {
-    background: #f7f3ff;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    margin: 20px 0;
-    overflow: hidden;
-  }
-
-  .code-header {
-    background: #ede5ff;
-    padding: 8px 16px;
-    font-family: var(--f);
-    font-size: 11px;
-    color: var(--muted);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    letter-spacing: 0.08em;
-  }
-
-  .code-dot { width: 8px; height: 8px; border-radius: 50%; }
-
-  pre {
-    padding: 20px;
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    line-height: 1.7;
-    color: #3b1f6e;
-    overflow-x: auto;
-  }
-
-  .kw { color: #be185d; }
-  .fn { color: #7c3aed; }
-  .st { color: #047857; }
-  .cm { color: #a78dbf; font-style: italic; }
-  .nm { color: #b45309; }
-
-  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; font-family: var(--f); }
-
-  th {
-    background: var(--surface2);
-    padding: 10px 16px;
-    text-align: left;
-    font-family: var(--f);
-    font-size: 10px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--accent);
-    border-bottom: 2px solid var(--border);
-    font-weight: 700;
-  }
-
-  td { padding: 10px 16px; border-bottom: 1px solid var(--border); color: #2a1a4a; }
-  tr:hover td { background: rgba(91,33,182,0.04); }
-
-  .flow { margin: 24px 0; position: relative; }
-
-  .flow-step {
-    display: flex;
-    gap: 20px;
-    padding: 16px 0;
-    position: relative;
-  }
-
-  .flow-step::before {
-    content: '';
-    position: absolute;
-    left: 20px; top: 52px; bottom: -16px;
-    width: 1px;
-    background: linear-gradient(var(--border), transparent);
-  }
-
-  .flow-step:last-child::before { display: none; }
-
-  .flow-num {
-    min-width: 40px; height: 40px;
-    background: var(--surface2);
-    border: 1px solid var(--accent);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--f);
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--accent);
-    flex-shrink: 0;
-  }
-
-  .flow-content .flow-title { font-size: 14px; font-weight: 700; color: #0f0a1e; margin-bottom: 4px; font-family: var(--f); }
-  .flow-content p { margin: 0; font-size: 13px; color: #3d2a60; }
-
-  .outcome-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 16px;
-    margin: 24px 0;
-  }
-
-  .outcome-card {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    padding: 20px;
-    border-radius: 4px;
-    text-align: center;
-  }
-
-  .outcome-num {
-    font-family: var(--f);
-    font-size: 40px;
-    font-weight: 700;
-    color: var(--accent);
-    line-height: 1;
-    margin-bottom: 6px;
-    letter-spacing: -0.02em;
-  }
-
-  .outcome-label { font-size: 12px; color: #3d2a60; letter-spacing: 0.05em; font-family: var(--f); }
-
-  .challenge-item {
-    display: flex;
-    gap: 16px;
-    padding: 16px 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .challenge-item:last-child { border-bottom: none; }
-
-  .challenge-marker {
-    min-width: 6px; height: 6px;
-    background: var(--accent2);
-    border-radius: 50%;
-    margin-top: 8px;
-    flex-shrink: 0;
-  }
-
-  .challenge-title { font-size: 14px; font-weight: 700; color: #0f0a1e; margin-bottom: 4px; font-family: var(--f); }
-  .challenge-desc { font-size: 13px; color: #3d2a60; font-family: var(--f); }
-
-  .future-list { list-style: none; margin: 16px 0; }
-
-  .future-list li {
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 14px;
-    color: #2a1a4a;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-family: var(--f);
-  }
-
-  .future-list li::before {
-    content: '→';
-    font-family: var(--f);
-    color: var(--accent3);
-    font-size: 13px;
-  }
-
-  .conclusion-box {
-    background: linear-gradient(135deg, rgba(124,58,237,0.07), rgba(192,38,211,0.04));
-    border: 1px solid rgba(124,58,237,0.22);
-    padding: 36px;
-    border-radius: 4px;
-    margin: 32px 0;
-  }
-
-  footer { padding: 48px 0; text-align: center; }
-
-  footer p {
-    font-family: var(--f);
-    font-size: 11px;
-    color: #4a3a6e;
-    letter-spacing: 0.1em;
-    margin: 0;
-  }
-
-  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
-  .reveal.visible { opacity: 1; transform: translateY(0); }
-
-  .ref-list { margin: 24px 0; }
-
-  .ref-item {
-    display: flex;
-    gap: 16px;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--border);
-    align-items: flex-start;
-  }
-
-  .ref-item:last-child { border-bottom: none; }
-
-  .ref-num {
-    font-family: var(--f);
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--accent);
-    min-width: 32px;
-    padding-top: 2px;
-    letter-spacing: 0.05em;
-  }
-
-  .ref-body { font-size: 13px; line-height: 1.65; color: #3d2a60; font-family: var(--f); }
-  .ref-authors { font-weight: 700; color: #0f0a1e; margin-right: 4px; }
-  .ref-year { margin-right: 4px; color: #3d2a60; }
-  .ref-title { font-style: italic; color: #5b21b6; margin-right: 4px; }
-  .ref-source { margin-right: 6px; color: #3d2a60; }
-
-  .ref-link {
-    color: var(--accent);
-    text-decoration: none;
-    font-family: var(--f);
-    font-size: 11px;
-    word-break: break-all;
-  }
-
-  .ref-link:hover { text-decoration: underline; }
-
-  /* SOLO AUTHOR BLOCK */
-  .author-block {
-    margin: 28px 0 36px;
-    padding: 22px 28px;
-    background: rgba(91,33,182,0.07);
-    border: 1px solid rgba(91,33,182,0.22);
-    border-left: 4px solid var(--accent);
-    border-radius: 6px;
-    display: inline-block;
-    width: 100%;
-  }
-
-  .author-label {
-    font-family: var(--f);
-    font-size: 9px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 8px;
-    font-weight: 700;
-  }
-
-  .author-name {
-    font-family: var(--f);
-    font-size: 22px;
-    font-weight: 700;
-    color: #0f0a1e;
-    letter-spacing: 0.04em;
-  }
-
-  @media (max-width: 600px) {
-    .container { padding: 0 20px; }
-    h1 { font-size: 30px; }
-    .meta-grid { grid-template-columns: 1fr 1fr; }
-    .author-name { font-size: 18px; }
-  }
-</style>
-</head>
-<body>
-
-<header>
-  <div class="grid-bg"></div>
-  <div class="container">
-    <div class="tag">Project Report · Robotics Simulation</div>
-    <h1>Smart Hospital<br/><span>Robotics Simulation</span><br/>Environment</h1>
-    <p class="subtitle">// Intelligent Multi-Robot Healthcare Automation using BrowserBotics &amp; PyBullet Physics</p>
-
-    <div class="author-block">
-      <div class="author-label">Author</div>
-      <div class="author-name">Gautam Vijay K K</div>
-    </div>
-
-    <div class="meta-grid">
-      <div class="meta-card"><div class="label">Domain</div><div class="value">Healthcare Robotics</div></div>
-      <div class="meta-card"><div class="label">Platform</div><div class="value">BrowserBotics (bb)</div></div>
-      <div class="meta-card"><div class="label">Physics Engine</div><div class="value">PyBullet / Bullet3</div></div>
-      <div class="meta-card"><div class="label">Simulation Rate</div><div class="value">240 Hz (DT = 1/240 s)</div></div>
-      <div class="meta-card"><div class="label">Robot Models</div><div class="value">Franka Panda URDF</div></div>
-      <div class="meta-card"><div class="label">Language</div><div class="value">Python 3</div></div>
-    </div>
-  </div>
-</header>
-
-<main>
-  <div class="container">
-
-    <div class="toc reveal">
-      <div class="toc-title">// Table of Contents</div>
-      <ol>
-        <li><a href="#abstract">Abstract</a></li>
-        <li><a href="#problem">Problem Statement</a></li>
-        <li><a href="#objectives">Objectives</a></li>
-        <li><a href="#environment">Environment Design</a></li>
-        <li><a href="#methodology">Methodology &amp; Architecture</a></li>
-        <li><a href="#implementation">Implementation Details</a></li>
-        <li><a href="#outcomes">Results &amp; Outcomes</a></li>
-        <li><a href="#challenges">Challenges &amp; Solutions</a></li>
-        <li><a href="#future">Future Work</a></li>
-        <li><a href="#conclusion">Conclusion</a></li>
-        <li><a href="#references">References</a></li>
-      </ol>
-    </div>
-
-    <section class="section reveal" id="abstract">
-      <div class="section-header"><span class="section-num">01</span><h2>Abstract</h2></div>
-      <div class="highlight">
-        <p>This project presents a comprehensive <strong>physics-based simulation of a fully equipped smart hospital room</strong> featuring multiple collaborative autonomous robots. Built on the BrowserBotics (bb) framework atop PyBullet rigid-body physics, the simulation integrates a Franka Panda 7-DOF robotic arm for medication pick-and-place operations, a Da Vinci-inspired surgical robot with animated multi-arm kinematics, a Lokomat rehabilitation exoskeleton performing gait assistance, and an autonomous vacuum robot performing continuous floor cleaning. The environment models realistic hospital equipment — beds, IV stands, vital-sign monitors, crash carts, surgical lighting, and workstations — all repositionable at runtime via interactive debug sliders.</p>
-      </div>
-      <p>The simulation serves as a proof-of-concept testbed for human-robot collaboration protocols in clinical settings, demonstrating path planning, inverse kinematics, and multi-agent coordination within a shared physical workspace.</p>
-    </section>
-
-    <section class="section reveal" id="problem">
-      <div class="section-header"><span class="section-num">02</span><h2>Problem Statement</h2></div>
-      <p>Modern hospitals increasingly explore robotic automation to reduce staff workload, minimize infection vectors from human contact, and improve precision in surgical and rehabilitation workflows. However, testing real robotic systems in live clinical environments is:</p>
-      <div class="flow">
-        <div class="flow-step">
-          <div class="flow-num">!</div>
-          <div class="flow-content"><div class="flow-title">Prohibitively expensive</div><p>Physical robot procurement, facility modification, and insurance overhead creates barriers to iterative prototyping.</p></div>
-        </div>
-        <div class="flow-step">
-          <div class="flow-num">!</div>
-          <div class="flow-content"><div class="flow-title">Safety-critical</div><p>Bugs in motion planning or collision avoidance cannot be tolerated near patients or fragile equipment.</p></div>
-        </div>
-        <div class="flow-step">
-          <div class="flow-num">!</div>
-          <div class="flow-content"><div class="flow-title">Multi-system complexity</div><p>Coordinating heterogeneous robots (surgical, rehabilitative, logistics) in the same space requires simulation before deployment.</p></div>
-        </div>
-      </div>
-      <p>This project addresses these barriers by providing a <strong>low-cost, high-fidelity simulation environment</strong> where robotic algorithms can be developed, tested, and visualized before any physical hardware is involved.</p>
-    </section>
-
-    <section class="section reveal" id="objectives">
-      <div class="section-header"><span class="section-num">03</span><h2>Objectives</h2></div>
-      <ul class="future-list">
-        <li>Design a geometrically detailed 10×8×4 m hospital room using primitive collision bodies</li>
-        <li>Implement a Franka Panda arm with full 7-DOF IK-based pick-and-place for medication delivery</li>
-        <li>Simulate a Da Vinci surgical robot with three animated arms performing table-top maneuvers</li>
-        <li>Animate a Lokomat rehabilitation exoskeleton executing periodic gait cycles</li>
-        <li>Deploy an autonomous vacuum robot executing a room-wide coverage path</li>
-        <li>Enable runtime repositioning of all major furniture and equipment via debug UI sliders</li>
-        <li>Provide a gripper control interface (manual + automatic pick-and-drop sequences)</li>
-        <li>Simulate dynamic objects (medication cube) subject to rigid-body physics</li>
-      </ul>
-    </section>
-
-    <section class="section reveal" id="environment">
-      <div class="section-header"><span class="section-num">04</span><h2>Environment Design</h2></div>
-      <p>The hospital room is constructed entirely from axis-aligned box primitives via <code>bb.createBody(shape="box", ...)</code>. This approach allows real-time physics simulation with precise collision geometry. The room dimensions are <strong>10 m (L) × 8 m (W) × 4 m (H)</strong>.</p>
-
-      <h3>Static Elements</h3>
-      <div class="component-grid">
-        <div class="component-card"><span class="card-icon">🏥</span><div class="card-title">Room Shell</div><div class="card-desc">Floor with tile grid, 3 solid walls, front wall with double-door entry and hospital cross signage</div></div>
-        <div class="component-card"><span class="card-icon">💡</span><div class="card-title">Overhead Surgical Light</div><div class="card-desc">Dual-arm ceiling light above the bed zone with 6 recessed panel lights</div></div>
-        <div class="component-card"><span class="card-icon">🪟</span><div class="card-title">Windows</div><div class="card-desc">Two framed windows with horizontal blind slats on both side walls</div></div>
-        <div class="component-card"><span class="card-icon">🚿</span><div class="card-title">Sink &amp; Mirror</div><div class="card-desc">Hand-wash station with faucet, basin, soap dispenser, and wall mirror</div></div>
-        <div class="component-card"><span class="card-icon">💊</span><div class="card-title">Medicine Cabinet</div><div class="card-desc">Wall-mounted locked cabinet with red cross, three shelves with vials</div></div>
-        <div class="component-card"><span class="card-icon">📋</span><div class="card-title">Whiteboard</div><div class="card-desc">Patient info board with color-coded marker lines and tray</div></div>
-        <div class="component-card"><span class="card-icon">🖥️</span><div class="card-title">Nurse Workstation</div><div class="card-desc">Full L-shaped desk with dual monitors, keyboard, mouse, tower PC, and operator chair</div></div>
-        <div class="component-card"><span class="card-icon">🗑️</span><div class="card-title">Waste Bins</div><div class="card-desc">Color-coded biohazard (red), sharps (yellow), and general bins</div></div>
-        <div class="component-card"><span class="card-icon">🔌</span><div class="card-title">Network Rack</div><div class="card-desc">19" rack unit with 8 patch panels and status LEDs</div></div>
-        <div class="component-card"><span class="card-icon">🚨</span><div class="card-title">Emergency Call Panel</div><div class="card-desc">Wall-mounted panel beside door with red alert and green clear buttons</div></div>
-        <div class="component-card"><span class="card-icon">⏱️</span><div class="card-title">Wall Clock</div><div class="card-desc">Round clock with hour and minute hands above door</div></div>
-        <div class="component-card"><span class="card-icon">💉</span><div class="card-title">Medication Counter</div><div class="card-desc">Prep counter with vials, syringes, and drawer set</div></div>
-      </div>
-
-      <h3>Moveable Groups</h3>
-      <p>Six equipment groups are repositionable at runtime using <strong>XY debug sliders</strong>. Each group is defined as a list of <code>(body_id, original_position)</code> tuples; displacement is applied as a delta transform:</p>
-      <table>
-        <thead><tr><th>Group</th><th>Default Position</th><th>Slider Range</th><th>Components</th></tr></thead>
-        <tbody>
-          <tr><td>Hospital Bed</td><td>(0, 0)</td><td>±3 m</td><td>Frame, mattress, rails, IV bar, pillow, coverlet</td></tr>
-          <tr><td>Panda Robot + Tray</td><td>(0, −1)</td><td>X: ±3, Y: −3..1</td><td>Base platform, wheels, tray table, tool items</td></tr>
-          <tr><td>IV Stand</td><td>(−0.9, 0.9)</td><td>±3.5 m</td><td>Pole, base cross, bag, drip tube, pump</td></tr>
-          <tr><td>Crash Cart</td><td>(3.8, 2.5)</td><td>±4.5 m</td><td>Red body, drawers with pulls, wheels, AED paddle</td></tr>
-          <tr><td>Oxygen Tank</td><td>(−1.4, 0.9)</td><td>±4 m</td><td>Green cylinder, valve, regulator head</td></tr>
-          <tr><td>Vital Signs Monitor</td><td>(−1.7, −0.9)</td><td>±4 m</td><td>Pole stand, screen, waveform bars, cable</td></tr>
-        </tbody>
-      </table>
-    </section>
-
-    <section class="section reveal" id="methodology">
-      <div class="section-header"><span class="section-num">05</span><h2>Methodology &amp; Architecture</h2></div>
-      <h3>System Architecture</h3>
-      <div class="flow">
-        <div class="flow-step"><div class="flow-num">1</div><div class="flow-content"><div class="flow-title">Scene Initialization</div><p>All static bodies, moveable groups, robot models, and animated objects created once before the main loop.</p></div></div>
-        <div class="flow-step"><div class="flow-num">2</div><div class="flow-content"><div class="flow-title">Physics Step</div><p><code>bb.stepSimulation(DT)</code> advances rigid-body dynamics at 240 Hz. Dynamic mass is assigned only to the medication cube.</p></div></div>
-        <div class="flow-step"><div class="flow-num">3</div><div class="flow-content"><div class="flow-title">Autonomous Robot Updates</div><p>Vacuum robot waypoint navigation, Da Vinci surgical arm parametric animation, Lokomat gait kinematics — all updated per frame using elapsed simulation time.</p></div></div>
-        <div class="flow-step"><div class="flow-num">4</div><div class="flow-content"><div class="flow-title">User Input Processing</div><p>Debug sliders polled for object positions; debug buttons checked for state transitions (PickAndDrop, ResetCube, MoveArm, GripOpen, GripClose).</p></div></div>
-        <div class="flow-step"><div class="flow-num">5</div><div class="flow-content"><div class="flow-title">Panda Arm Sequencer</div><p>Finite-state pick-and-place sequence executes IK-guided motion steps with configurable hold durations per phase.</p></div></div>
-      </div>
-      <h3>Simulation Philosophy</h3>
-      <p>The simulation deliberately uses <strong>kinematic override</strong> for all animated robots (Da Vinci, Lokomat, vacuum, visual gripper fingers) rather than PD torque control. This provides visually smooth motion without requiring tuned gains, which is appropriate for a visualization-first prototype. Only the Franka Panda uses PyBullet's joint motor PD control via <code>setJointMotorControl</code> to demonstrate realistic servo-driven behavior.</p>
-    </section>
-
-    <section class="section reveal" id="implementation">
-      <div class="section-header"><span class="section-num">06</span><h2>Implementation Details</h2></div>
-      <h3>Franka Panda — Pick-and-Place</h3>
-      <p>The Panda arm is loaded from URDF with <code>fixedBase=True</code> oriented 90° about Z. Inverse kinematics targets are computed via:</p>
-      <div class="code-block">
-        <div class="code-header"><div class="code-dot" style="background:#ff5f57"></div><div class="code-dot" style="background:#febc2e"></div><div class="code-dot" style="background:#28c840"></div>&nbsp;panda_ik.py</div>
-        <pre><span class="cm"># Compute IK for end-effector position + fixed downward orientation</span>
-<span class="kw">def</span> <span class="fn">ik_move</span>(px, py, pz):
-    jp = bb.<span class="fn">calculateInverseKinematics</span>(
-        robot, ee_link,
-        [px, py, pz], DQ   <span class="cm"># DQ = euler(π, 0, 0) → gripper faces down</span>
-    )
-    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">min</span>(<span class="nm">7</span>, <span class="fn">len</span>(jp))):
-        bb.<span class="fn">setJointMotorControl</span>(robot, i, targetPosition=jp[i])</pre>
-      </div>
-
-      <p>The pick-and-place sequence is defined as a list of <strong>(label, action_fn, hold_frames)</strong> tuples. Twelve discrete phases are executed:</p>
-      <table>
-        <thead><tr><th>Phase</th><th>Action</th><th>Hold (frames)</th></tr></thead>
-        <tbody>
-          <tr><td>HOME</td><td>Return to home joint configuration</td><td>160</td></tr>
-          <tr><td>OPEN</td><td>Open gripper fingers</td><td>80</td></tr>
-          <tr><td>ABOVE_PICK</td><td>Move to +16 cm above pick point</td><td>300</td></tr>
-          <tr><td>TO_PICK</td><td>Descend to cube surface</td><td>300</td></tr>
-          <tr><td>GRIP</td><td>Close fingers around cube</td><td>160</td></tr>
-          <tr><td>LIFT</td><td>Raise to carry height</td><td>300</td></tr>
-          <tr><td>TRANSIT</td><td>Arc through midpoint at +5 cm carry height</td><td>300</td></tr>
-          <tr><td>ABOV_DROP</td><td>Descend above drop zone</td><td>300</td></tr>
-          <tr><td>TO_DROP</td><td>Lower to drop surface</td><td>300</td></tr>
-          <tr><td>RELEASE</td><td>Open gripper to deposit cube</td><td>160</td></tr>
-          <tr><td>RETREAT</td><td>Lift back above drop zone</td><td>300</td></tr>
-          <tr><td>HOME_END</td><td>Return home</td><td>160</td></tr>
-        </tbody>
-      </table>
-
-      <h3>Cube Carry (Kinematic Attachment)</h3>
-      <div class="code-block">
-        <div class="code-header"><div class="code-dot" style="background:#ff5f57"></div><div class="code-dot" style="background:#febc2e"></div><div class="code-dot" style="background:#28c840"></div>&nbsp;carry_logic.py</div>
-        <pre><span class="kw">if</span> gripped:
-    ep, eo = bb.<span class="fn">getLinkPose</span>(robot, ee_link)
-    bb.<span class="fn">resetBasePose</span>(cube,
-        [ep[<span class="nm">0</span>], ep[<span class="nm">1</span>], ep[<span class="nm">2</span>] - CARRY],  <span class="cm"># 5.5 cm below EE</span>
-        eo)</pre>
-      </div>
-
-      <h3>Da Vinci Surgical Robot</h3>
-      <div class="code-block">
-        <div class="code-header"><div class="code-dot" style="background:#ff5f57"></div><div class="code-dot" style="background:#febc2e"></div><div class="code-dot" style="background:#28c840"></div>&nbsp;surgical_anim.py</div>
-        <pre><span class="kw">def</span> <span class="fn">animate_surgical_robot</span>(t):
-    a1 = t * <span class="nm">0.6</span>
-    tip1_x = SRX + math.<span class="fn">sin</span>(a1)*<span class="nm">0.12</span> - <span class="nm">0.08</span>
-    tip1_y = SRY + math.<span class="fn">cos</span>(a1*<span class="nm">0.7</span>)*<span class="nm">0.08</span>
-    tip1_z = table_z + <span class="nm">0.02</span>
-    mid1 = [(<span class="fn">sh1</span>[<span class="nm">0</span>]+tip1_x)/<span class="nm">2</span>, ..., ... + <span class="nm">0.15</span>]
-    g = <span class="nm">0.012</span> + <span class="nm">0.008</span>*math.<span class="fn">sin</span>(t*<span class="nm">2.5</span>)</pre>
-      </div>
-
-      <h3>Lokomat Gait Animation</h3>
-      <div class="code-block">
-        <div class="code-header"><div class="code-dot" style="background:#ff5f57"></div><div class="code-dot" style="background:#febc2e"></div><div class="code-dot" style="background:#28c840"></div>&nbsp;lokomat_gait.py</div>
-        <pre><span class="cm"># Hip and knee angles from phase offset</span>
-ph = t * LK_GAIT_SPEED + (<span class="nm">0.0</span> <span class="kw">if</span> side==<span class="st">"L"</span> <span class="kw">else</span> math.pi)
-hip_a  = LK_HIP_AMP  * math.<span class="fn">sin</span>(ph)
-knee_b = LK_KNEE_AMP * <span class="fn">max</span>(<span class="nm">0</span>, math.<span class="fn">sin</span>(ph - <span class="nm">0.5</span>))
-knee_x = LKX + LK_THIGH_LEN * math.<span class="fn">sin</span>(hip_a)
-knee_z = hip_z - LK_THIGH_LEN * math.<span class="fn">cos</span>(hip_a)</pre>
-      </div>
-
-      <h3>Vacuum Robot Navigation</h3>
-      <div class="code-block">
-        <div class="code-header"><div class="code-dot" style="background:#ff5f57"></div><div class="code-dot" style="background:#febc2e"></div><div class="code-dot" style="background:#28c840"></div>&nbsp;vacuum_nav.py</div>
-        <pre>tgt = vac_path[vac_wp]
-dvx = tgt[<span class="nm">0</span>]-vac_x;  dvy = tgt[<span class="nm">1</span>]-vac_y
-d   = math.<span class="fn">sqrt</span>(dvx*dvx + dvy*dvy)
-<span class="kw">if</span> d &lt; <span class="nm">0.15</span>:
-    vac_wp = (vac_wp+<span class="nm">1</span>) % <span class="fn">len</span>(vac_path)
-<span class="kw">else</span>:
-    vac_x += (dvx/d)*vac_spd
-    ang = math.<span class="fn">atan2</span>(dvy, dvx)</pre>
-      </div>
-    </section>
-
-    <section class="section reveal" id="outcomes">
-      <div class="section-header"><span class="section-num">07</span><h2>Results &amp; Outcomes</h2></div>
-      <div class="outcome-grid">
-        <div class="outcome-card"><div class="outcome-num">4</div><div class="outcome-label">Distinct Robot Systems</div></div>
-        <div class="outcome-card"><div class="outcome-num">240</div><div class="outcome-label">Hz Physics Rate</div></div>
-        <div class="outcome-card"><div class="outcome-num">12</div><div class="outcome-label">Pick-and-Place Phases</div></div>
-        <div class="outcome-card"><div class="outcome-num">6</div><div class="outcome-label">Repositionable Equipment Groups</div></div>
-        <div class="outcome-card"><div class="outcome-num">13</div><div class="outcome-label">Vacuum Coverage Waypoints</div></div>
-        <div class="outcome-card"><div class="outcome-num">300+</div><div class="outcome-label">Scene Primitive Bodies</div></div>
-      </div>
-      <h3>Key Achievements</h3>
-      <ul class="future-list">
-        <li>Fully automated medication delivery cycle: tray → bed and bed → tray, both directions</li>
-        <li>All robot positions update correctly when equipment is repositioned via sliders at runtime</li>
-        <li>Da Vinci arm animation produces realistic instrument sweep over a simulated patient table</li>
-        <li>Lokomat gait cycle shows physiologically plausible bilateral alternating leg swing with treadmill belt motion</li>
-        <li>Vacuum robot completes full room coverage without manual intervention</li>
-        <li>Visual gripper finger bodies track end-effector orientation in real-time using quaternion rotation</li>
-        <li>Status overlay text dynamically reports active motion phase to operator</li>
-      </ul>
-    </section>
-
-    <section class="section reveal" id="challenges">
-      <div class="section-header"><span class="section-num">08</span><h2>Challenges &amp; Solutions</h2></div>
-      <div class="challenge-item"><div class="challenge-marker"></div><div><div class="challenge-title">Cube Slipping Under High-Speed Motion</div><div class="challenge-desc">Fast IK transitions caused the dynamic cube to lag behind the gripper. Solved by using <code>resetBasePose</code> kinematic attachment on every frame during the CARRY_STEPS phases, completely overriding physics for the carried object.</div></div></div>
-      <div class="challenge-item"><div class="challenge-marker"></div><div><div class="challenge-title">Group Repositioning of Multi-Body Objects</div><div class="challenge-desc">Updating dozens of body positions atomically per slider change was expensive. Solved by tracking previous slider values and only triggering <code>reposition_group</code> when delta exceeds 1 mm threshold.</div></div></div>
-      <div class="challenge-item"><div class="challenge-marker"></div><div><div class="challenge-title">IK Failing Near Arm Singularities</div><div class="challenge-desc">Some target positions caused URDF IK to return fewer than 7 joint values. Mitigated by clamping loop to <code>min(7, len(jp))</code> and defining home configuration offsets that bias the arm away from known singularity regions.</div></div></div>
-      <div class="challenge-item"><div class="challenge-marker"></div><div><div class="challenge-title">Visual Finger Orientation Drift</div><div class="challenge-desc">Gripper finger visualization needed to match end-effector orientation dynamically. Solved by implementing <code>quat_rotate</code> to project finger offsets into EE frame, then placing them using <code>resetBasePose</code> each frame.</div></div></div>
-      <div class="challenge-item"><div class="challenge-marker"></div><div><div class="challenge-title">Coordinate Offsets on Repositioned Sequences</div><div class="challenge-desc">When the robot base is moved via slider, the pick/drop target coordinates must be adjusted. Solved by computing <code>base_dx/dy</code> and <code>bed_dx/dy</code> deltas at the moment PickAndDrop is pressed, then constructing the sequence with offset-corrected positions.</div></div></div>
-    </section>
-
-    <section class="section reveal" id="future">
-      <div class="section-header"><span class="section-num">09</span><h2>Future Work</h2></div>
-      <ul class="future-list">
-        <li>Replace hardcoded Lokomat gait with a patient-adaptive model driven by EMG signal data</li>
-        <li>Implement full ROS2 integration to allow real Panda hardware control from the same codebase</li>
-        <li>Add collision detection-based obstacle avoidance for the vacuum robot path planner</li>
-        <li>Introduce a second robotic nurse assistant capable of drawing curtains and operating door handles</li>
-        <li>Replace debug sliders with a 2D touchscreen floor-plan interface for drag-and-drop furniture layout</li>
-        <li>Add occupancy grid mapping from simulated LIDAR on the robot base platform</li>
-        <li>Simulate fluid dynamics for IV drip bag volume decrease over time</li>
-        <li>Implement multi-robot collision avoidance using a shared workspace reservation system</li>
-      </ul>
-    </section>
-
-    <section class="section reveal" id="conclusion">
-      <div class="section-header"><span class="section-num">10</span><h2>Conclusion</h2></div>
-      <div class="conclusion-box">
-        <p style="color: #2a1a4a; font-size: 15px; margin: 0;">
-          This project successfully demonstrates a <strong>multi-robot smart hospital simulation</strong> that is both visually accurate and physically grounded. By combining a Franka Panda arm executing IK-guided pick-and-place with a Da Vinci surgical robot, a Lokomat exoskeleton, and an autonomous vacuum agent — all sharing the same physics world — the system provides a meaningful testbed for studying human-robot collaboration protocols, spatial layout planning, and motion algorithm development in healthcare environments.
-          <br/><br/>
-          The architecture's clean separation of static scene construction, moveable group management, animation callbacks, and user input processing makes it highly extensible. The simulation validates that physics-based virtual environments can replicate the complexity of real hospital workflows at negligible cost and zero patient risk — making it a compelling first step toward simulation-to-real transfer for clinical robotics.
-        </p>
-      </div>
-      <h3>Technology Stack Summary</h3>
-      <table>
-        <thead><tr><th>Component</th><th>Technology</th><th>Purpose</th></tr></thead>
-        <tbody>
-          <tr><td>Physics Engine</td><td>PyBullet / Bullet3</td><td>Rigid-body dynamics, IK solver, URDF loading</td></tr>
-          <tr><td>Simulation API</td><td>BrowserBotics (bb)</td><td>Scene construction, debug UI, joint control</td></tr>
-          <tr><td>Robot Model</td><td>panda.urdf (Franka)</td><td>7-DOF arm kinematics and link definitions</td></tr>
-          <tr><td>Language</td><td>Python 3</td><td>Control logic, animation, sequencing</td></tr>
-          <tr><td>Math</td><td>Python math module</td><td>Trig for gait, quaternion ops, path geometry</td></tr>
-          <tr><td>Timing</td><td>time.sleep(DT)</td><td>Real-time pacing at 240 Hz</td></tr>
-        </tbody>
-      </table>
-    </section>
-
-    <section class="section reveal" id="references">
-      <div class="section-header"><span class="section-num">11</span><h2>References</h2></div>
-      <div class="ref-list">
-        <div class="ref-item"><div class="ref-num">[1]</div><div class="ref-body"><span class="ref-authors">Coumans, E., &amp; Bai, Y.</span> <span class="ref-year">(2016–2021).</span> <span class="ref-title">PyBullet, a Python module for physics simulation for games, robotics and machine learning.</span> <span class="ref-source">GitHub Repository.</span> <a class="ref-link" href="http://pybullet.org" target="_blank">http://pybullet.org</a></div></div>
-        <div class="ref-item"><div class="ref-num">[2]</div><div class="ref-body"><span class="ref-authors">Haddadin, S., et al.</span> <span class="ref-year">(2022).</span> <span class="ref-title">The Franka Emika Robot: A Reference Platform for Robotics Research and Education.</span> <span class="ref-source">IEEE Robotics &amp; Automation Magazine, 29(2), 46–64.</span></div></div>
-        <div class="ref-item"><div class="ref-num">[3]</div><div class="ref-body"><span class="ref-authors">Guthart, G. S., &amp; Salisbury, J. K.</span> <span class="ref-year">(2000).</span> <span class="ref-title">The Intuitive™ telesurgery system: Overview and application.</span> <span class="ref-source">Proceedings ICRA, 618–621.</span></div></div>
-        <div class="ref-item"><div class="ref-num">[4]</div><div class="ref-body"><span class="ref-authors">Jezernik, S., et al.</span> <span class="ref-year">(2003).</span> <span class="ref-title">Robotic orthosis Lokomat: A rehabilitation and research tool.</span> <span class="ref-source">Neuromodulation, 6(2), 108–115.</span></div></div>
-        <div class="ref-item"><div class="ref-num">[5]</div><div class="ref-body"><span class="ref-authors">Siciliano, B., et al.</span> <span class="ref-year">(2009).</span> <span class="ref-title">Robotics: Modelling, Planning and Control.</span> <span class="ref-source">Springer.</span></div></div>
-        <div class="ref-item"><div class="ref-num">[6]</div><div class="ref-body"><span class="ref-authors">Meng, L., et al.</span> <span class="ref-year">(2021).</span> <span class="ref-title">Autonomous robot for hospital logistics.</span> <span class="ref-source">Robotics and Autonomous Systems, 136, 103724.</span></div></div>
-        <div class="ref-item"><div class="ref-num">[7]</div><div class="ref-body"><span class="ref-authors">Quigley, M., et al.</span> <span class="ref-year">(2009).</span> <span class="ref-title">ROS: An open-source Robot Operating System.</span> <span class="ref-source">ICRA Workshop on Open Source Software.</span></div></div>
-        <div class="ref-item"><div class="ref-num">[8]</div><div class="ref-body"><span class="ref-authors">Craig, J. J.</span> <span class="ref-year">(2005).</span> <span class="ref-title">Introduction to Robotics: Mechanics and Control (3rd ed.).</span> <span class="ref-source">Pearson Prentice Hall.</span></div></div>
-        <div class="ref-item"><div class="ref-num">[9]</div><div class="ref-body"><span class="ref-authors">Correll, N., et al.</span> <span class="ref-year">(2016).</span> <span class="ref-title">Analysis and Observations from the First Amazon Picking Challenge.</span> <span class="ref-source">IEEE TASE, 15(1), 172–188.</span></div></div>
-        <div class="ref-item"><div class="ref-num">[10]</div><div class="ref-body"><span class="ref-authors">Bharti, T., &amp; Turlapati, S. H.</span> <span class="ref-year">(2020).</span> <span class="ref-title">Simulation environments for robot learning: A comparative review.</span> <span class="ref-source">IJRRD, 10(1), 1–12.</span></div></div>
-        <div class="ref-item"><div class="ref-num">[11]</div><div class="ref-body"><span class="ref-authors">BrowserBotics Documentation.</span> <span class="ref-year">(2024).</span> <span class="ref-title">BrowserBotics API Reference.</span> <span class="ref-source">Internal Technical Documentation.</span></div></div>
-        <div class="ref-item"><div class="ref-num">[12]</div><div class="ref-body"><span class="ref-authors">Franka Robotics GmbH.</span> <span class="ref-year">(2023).</span> <span class="ref-title">Franka Emika Panda URDF and Dynamic Parameters.</span> <a class="ref-link" href="https://frankaemika.github.io/docs" target="_blank">https://frankaemika.github.io/docs</a></div></div>
-      </div>
-    </section>
-
-  </div>
-</main>
-
-<footer>
-  <div class="container">
-    <p>Smart Hospital Robotics Simulation &nbsp;·&nbsp; BrowserBotics + PyBullet &nbsp;·&nbsp; Gautam Vijay K K</p>
-  </div>
-</footer>
-
-<script>
-  const reveals = document.querySelectorAll('.reveal');
-  const obs = new IntersectionObserver(entries => {
-    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
-  }, { threshold: 0.08 });
-  reveals.forEach(r => obs.observe(r));
-</script>
-
-</body>
-</html>
+import time, math
+import browserbotics as bb
+
+bb.resetSimulation()
+bb.setGravity(0, 0, -9.8)
+DT = 1.0 / 240.0
+
+# ============================================================
+# HELPER — tracked moveable group
+# ============================================================
+def _mk(parts, halfExtent, position, color, mass=0, shape="box"):
+    b = bb.createBody(shape=shape, halfExtent=halfExtent,
+                      position=position, color=color, mass=mass)
+    parts.append((b, list(position)))
+    return b
+
+def reposition_group(parts, new_cx, new_cy, orig_cx, orig_cy):
+    dx = new_cx - orig_cx; dy = new_cy - orig_cy
+    if abs(dx) < 0.001 and abs(dy) < 0.001:
+        return
+    qI = [0, 0, 0, 1]
+    for bid, (ox, oy, oz) in parts:
+        try: bb.resetBasePose(bid, [ox + dx, oy + dy, oz], qI)
+        except: pass
+
+# ============================================================
+# ROOM  (10 x 8 x 4 m)  — STATIC
+# ============================================================
+RL = 10.0; RW = 8.0; RH = 4.0; WT = 0.2
+
+bb.createBody(shape="box", halfExtent=[RL/2, RW/2, 0.05],
+    position=[0, 0, -0.05], color=0xf0eeea, mass=0)
+for i in range(-4, 5):
+    bb.createBody(shape="box", halfExtent=[RL/2, 0.01, 0.001],
+        position=[0, i*1.0, 0.001], color=0xddddcc, mass=0)
+for j in range(-4, 6):
+    bb.createBody(shape="box", halfExtent=[0.01, RW/2, 0.001],
+        position=[j*1.0, 0, 0.001], color=0xddddcc, mass=0)
+
+bb.createBody(shape="box", halfExtent=[RL/2, RW/2, 0.04],
+    position=[0, 0, RH+0.04], color=0xfafafa, mass=0)
+for cpx, cpy in [(-2.5,1.5),(0,1.5),(2.5,1.5),(-2.5,-1.5),(0,-1.5),(2.5,-1.5)]:
+    bb.createBody(shape="box", halfExtent=[0.45,0.28,0.008],
+        position=[cpx,cpy,RH-0.01], color=0xffffff, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.42,0.25,0.004],
+        position=[cpx,cpy,RH-0.016], color=0xfffde0, mass=0)
+
+bb.createBody(shape="box", halfExtent=[RL/2, WT/2, RH/2],
+    position=[0, -RW/2, RH/2], color=0xeae6e0, mass=0)
+bb.createBody(shape="box", halfExtent=[WT/2, RW/2, RH/2],
+    position=[-RL/2, 0, RH/2], color=0xeae6e0, mass=0)
+bb.createBody(shape="box", halfExtent=[WT/2, RW/2, RH/2],
+    position=[RL/2, 0, RH/2], color=0xeae6e0, mass=0)
+
+for swy in [-RW/2, RW/2]:
+    bb.createBody(shape="box", halfExtent=[RL/2, 0.012, 0.055],
+        position=[0, swy, 1.2], color=0x2c6fad, mass=0)
+bb.createBody(shape="box", halfExtent=[0.012, RW/2, 0.055],
+    position=[-RL/2, 0, 1.2], color=0x2c6fad, mass=0)
+bb.createBody(shape="box", halfExtent=[0.012, RW/2, 0.055],
+    position=[RL/2, 0, 1.2], color=0x2c6fad, mass=0)
+for sy in [-RW/2, RW/2]:
+    bb.createBody(shape="box", halfExtent=[RL/2, WT/2, 0.05],
+        position=[0, sy, 0.05], color=0xd0ccc5, mass=0)
+bb.createBody(shape="box", halfExtent=[WT/2, RW/2, 0.05],
+    position=[-RL/2, 0, 0.05], color=0xd0ccc5, mass=0)
+bb.createBody(shape="box", halfExtent=[WT/2, RW/2, 0.05],
+    position=[RL/2, 0, 0.05], color=0xd0ccc5, mass=0)
+
+# ============================================================
+# FRONT WALL + DOOR + HOSPITAL SIGN  — STATIC
+# ============================================================
+dw=2.0; dh=2.8; sw=(RL-dw)/2
+bb.createBody(shape="box", halfExtent=[sw/2, WT/2, RH/2],
+    position=[-dw/2-sw/2, RW/2, RH/2], color=0xeae6e0, mass=0)
+bb.createBody(shape="box", halfExtent=[sw/2, WT/2, RH/2],
+    position=[dw/2+sw/2, RW/2, RH/2], color=0xeae6e0, mass=0)
+bb.createBody(shape="box", halfExtent=[dw/2, WT/2, (RH-dh)/2],
+    position=[0, RW/2, dh+(RH-dh)/2], color=0xeae6e0, mass=0)
+bb.createBody(shape="box", halfExtent=[dw/2-0.05, 0.04, dh/2],
+    position=[0, RW/2+0.04, dh/2], color=0x7a9e7e, mass=0)
+for sx in [-dw/2, dw/2]:
+    bb.createBody(shape="box", halfExtent=[0.045, 0.06, dh/2],
+        position=[sx, RW/2, dh/2], color=0xc8b89a, mass=0)
+bb.createBody(shape="box", halfExtent=[dw/2, 0.06, 0.045],
+    position=[0, RW/2, dh], color=0xc8b89a, mass=0)
+bb.createBody(shape="box", halfExtent=[0.045, 0.012, 0.009],
+    position=[0.72, RW/2+0.05, 1.05], color=0xd4af37, mass=0)
+bb.createBody(shape="box", halfExtent=[0.85, 0.05, 0.14],
+    position=[0, RW/2+0.02, dh+0.18], color=0xcc0000, mass=0)
+bb.createBody(shape="box", halfExtent=[0.05, 0.06, 0.10],
+    position=[-0.72, RW/2+0.07, dh+0.18], color=0xffffff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.10, 0.06, 0.05],
+    position=[-0.72, RW/2+0.07, dh+0.18], color=0xffffff, mass=0)
+try:
+    bb.createDebugText("", [0.0, RW/2-0.10, dh+0.18],
+        color='white', size=1.3)
+except: pass
+
+for hsx in [-dw/2-0.28, dw/2+0.28]:
+    bb.createBody(shape="box", halfExtent=[0.045,0.04,0.11],
+        position=[hsx, RW/2-0.05, 1.4], color=0xffffff, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.018,0.018,0.025],
+        position=[hsx, RW/2-0.06, 1.27], color=0xcccccc, mass=0)
+
+bb.createBody(shape="box", halfExtent=[0.60, 0.60, 0.06],
+    position=[0, 0, RH+0.09], color=0xcc0000, mass=0)
+bb.createBody(shape="box", halfExtent=[0.14, 0.46, 0.08],
+    position=[0, 0, RH+0.17], color=0xffffff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.46, 0.14, 0.08],
+    position=[0, 0, RH+0.17], color=0xffffff, mass=0)
+
+# ============================================================
+# WINDOWS  — STATIC
+# ============================================================
+wx=-RL/2; wy=1.5
+bb.createBody(shape="box", halfExtent=[0.04,0.72,0.57],
+    position=[wx,wy,2.0], color=0x87ceeb, mass=0)
+for zz in [1.43,2.57]:
+    bb.createBody(shape="box", halfExtent=[0.055,0.74,0.038],
+        position=[wx,wy,zz], color=0xffffff, mass=0)
+for yy in [wy-0.72,wy+0.72]:
+    bb.createBody(shape="box", halfExtent=[0.055,0.038,0.60],
+        position=[wx,yy,2.0], color=0xffffff, mass=0)
+for bi in range(7):
+    bb.createBody(shape="box", halfExtent=[0.032,0.66,0.013],
+        position=[wx+0.01,wy,1.55+bi*0.16], color=0xf5f0e8, mass=0)
+wx2=RL/2; wy2=-1.5
+bb.createBody(shape="box", halfExtent=[0.04,0.70,0.55],
+    position=[wx2,wy2,2.0], color=0x87ceeb, mass=0)
+for zz in [1.45,2.55]:
+    bb.createBody(shape="box", halfExtent=[0.05,0.72,0.035],
+        position=[wx2,wy2,zz], color=0xffffff, mass=0)
+for yy in [wy2-0.70,wy2+0.70]:
+    bb.createBody(shape="box", halfExtent=[0.05,0.035,0.57],
+        position=[wx2,yy,2.0], color=0xffffff, mass=0)
+
+# ============================================================
+# HOSPITAL BED  — MOVEABLE GROUP  (anchor 0, 0)
+# ============================================================
+bed_parts = []
+BED_AX = 0.0; BED_AY = 0.0
+BL=2.2; BW=1.1; BH=0.5
+
+_mk(bed_parts, [BL/2,BW/2,BH/2], [0,0,BH/2], 0xdde8f0)
+for lx in [-BL/2+0.1, BL/2-0.1]:
+    for ly in [-BW/2+0.08, BW/2-0.08]:
+        _mk(bed_parts, [0.04,0.04,BH/2], [lx,ly,BH/2], 0xaabbc8)
+_mk(bed_parts, [BL/2-0.06,BW/2-0.06,0.1], [0,0,BH+0.1], 0xf0f8ff)
+_mk(bed_parts, [0.28,0.22,0.09], [BL/2-0.32,0,BH+0.25], 0xfff8f0)
+_mk(bed_parts, [0.6,BW/2-0.07,0.06], [-0.35,0,BH+0.25], 0x5b9bd5)
+for sy in [-1,1]:
+    _mk(bed_parts, [BL/2-0.1,0.018,0.18], [0,sy*BW/2,BH+0.18], 0xb8ccd8)
+    for px in [-0.7,0,0.7]:
+        _mk(bed_parts, [0.015,0.015,0.18], [px,sy*BW/2,BH+0.18], 0x99aabb)
+_mk(bed_parts, [0.04,BW/2,0.35], [BL/2,0,BH+0.35], 0x3a6186)
+_mk(bed_parts, [0.04,BW/2,0.22], [-BL/2,0,BH+0.22], 0x3a6186)
+for cx3,cy3,he in [
+    [0, BW/2+0.35,  [BL/2+0.3,0.014,0.014]],
+    [0,-(BW/2+0.35),[BL/2+0.3,0.014,0.014]],
+    [ BL/2+0.3,0,   [0.014,BW/2+0.35,0.014]],
+    [-(BL/2+0.3),0, [0.014,BW/2+0.35,0.014]],
+]:
+    _mk(bed_parts, he, [cx3,cy3,RH-0.1], 0xbbbbbb)
+_mk(bed_parts, [0.007,BW/2+0.33,0.88], [BL/2+0.3,0,RH-0.54], 0x4a7fc1)
+# Drop-zone marker
+_mk(bed_parts, [0.08,0.08,0.004], [0.0,0.0,BH+0.204], 0xffaa00)
+_mk(bed_parts, [0.055,0.055,0.003], [0.0,0.0,BH+0.207], 0xffd060)
+
+# ============================================================
+# PANDA ROBOT ARM  — MOVEABLE BASE
+# ============================================================
+RBX = 0.0; RBY = -1.0; RBZ = 0.12
+robo_orn = bb.getQuaternionFromEuler([0, 0, math.pi/2])
+
+robot = bb.loadURDF(
+    'panda.urdf',
+    [RBX, RBY, RBZ],
+    robo_orn,
+    fixedBase=True
+)
+
+ARM_JOINT_INDICES    = list(range(7))
+FINGER_JOINT_INDICES = [7, 8]
+ee_link              = 10
+FINGER_OPEN   = 0.04
+FINGER_CLOSED = 0.0
+
+def set_fingers(val):
+    for ji in FINGER_JOINT_INDICES:
+        bb.setJointMotorControl(robot, ji, targetPosition=val)
+
+# Visual gripper boxes
+FINGER_HALF = [0.013, 0.014, 0.055]
+finger_L = bb.createBody(shape="box", halfExtent=FINGER_HALF,
+    position=[0,0,-5], color=0x445566, mass=0)
+finger_R = bb.createBody(shape="box", halfExtent=FINGER_HALF,
+    position=[0,0,-5], color=0x445566, mass=0)
+
+SPREAD_OPEN   = 0.042
+SPREAD_CLOSED = 0.006
+grip_spread   = SPREAD_OPEN
+
+def quat_rotate(q, v):
+    qx,qy,qz,qw = q
+    ix =  qw*v[0] + qy*v[2] - qz*v[1]
+    iy =  qw*v[1] + qz*v[0] - qx*v[2]
+    iz =  qw*v[2] + qx*v[1] - qy*v[0]
+    iw = -qx*v[0] - qy*v[1] - qz*v[2]
+    return [
+        ix*qw + iw*(-qx) + iy*(-qz) - iz*(-qy),
+        iy*qw + iw*(-qy) + iz*(-qx) - ix*(-qz),
+        iz*qw + iw*(-qz) + ix*(-qy) - iy*(-qx)
+    ]
+
+def update_fingers(ep, eo, spread):
+    dL = quat_rotate(eo, [ spread, 0, -0.05])
+    dR = quat_rotate(eo, [-spread, 0, -0.05])
+    try:
+        bb.resetBasePose(finger_L,
+            [ep[0]+dL[0], ep[1]+dL[1], ep[2]+dL[2]], eo)
+        bb.resetBasePose(finger_R,
+            [ep[0]+dR[0], ep[1]+dR[1], ep[2]+dR[2]], eo)
+    except: pass
+
+def open_grip():
+    global grip_spread
+    grip_spread = SPREAD_OPEN
+    set_fingers(FINGER_OPEN)
+
+def close_grip():
+    global grip_spread
+    grip_spread = SPREAD_CLOSED
+    set_fingers(FINGER_CLOSED)
+
+# ============================================================
+# ROBOT PLATFORM + TRAY TABLE  — MOVEABLE GROUP  (anchor RBX, RBY)
+# ============================================================
+robo_parts = []
+
+_mk(robo_parts, [0.35,0.35,0.1], [RBX,RBY,0.1], 0x1c3f6e)
+for wx4,wy4 in [(-0.3,-0.3),(-0.3,0.3),(0.3,-0.3),(0.3,0.3)]:
+    _mk(robo_parts, [0.08,0.055,0.075], [RBX+wx4,RBY+wy4,0.075], 0x0a0a0a)
+    _mk(robo_parts, [0.03,0.06,0.03], [RBX+wx4,RBY+wy4,0.075], 0x444444)
+_mk(robo_parts, [0.33,0.018,0.005], [RBX,RBY,0.205], 0x00aaff)
+_mk(robo_parts, [0.018,0.33,0.005], [RBX,RBY,0.205], 0x00aaff)
+_mk(robo_parts, [0.026,0.026,0.032], [RBX+0.28,RBY,0.21], 0x00ff88)
+
+# Tray table (part of robot group — moves with robot)
+TRX_OFF = 0.55   # offset from RBX
+TRY_OFF = 0.0    # offset from RBY
+TRX = RBX + TRX_OFF; TRY = RBY + TRY_OFF; TRZ = 0.62
+
+_mk(robo_parts, [0.025,0.025,TRZ/2], [TRX,TRY,TRZ/2], 0xaaaaaa)
+_mk(robo_parts, [0.24,0.03,0.015], [TRX,TRY,0.025], 0x999999)
+_mk(robo_parts, [0.03,0.24,0.015], [TRX,TRY,0.025], 0x999999)
+_mk(robo_parts, [0.30,0.22,0.016], [TRX,TRY,TRZ], 0xb8d4b8)
+for sign in [-1,1]:
+    _mk(robo_parts, [0.30,0.012,0.022], [TRX,TRY+sign*0.22,TRZ+0.018], 0x888888)
+    _mk(robo_parts, [0.012,0.22,0.022], [TRX+sign*0.30,TRY,TRZ+0.018], 0x888888)
+_mk(robo_parts, [0.018,0.018,0.038], [TRX+0.18,TRY+0.12,TRZ+0.054], 0xffffff)
+_mk(robo_parts, [0.007,0.007,0.072], [TRX+0.18,TRY+0.12,TRZ+0.13], 0xcccccc)
+_mk(robo_parts, [0.022,0.016,0.032], [TRX+0.18,TRY-0.12,TRZ+0.048], 0xe67e22)
+
+# ============================================================
+# CUBE  — DYNAMIC (mass > 0, physically moveable)
+# ============================================================
+CH = 0.028
+LOC_A = [TRX, TRY, TRZ + 0.016 + CH]       # on tray
+LOC_B = [0.0, 0.0, BH + 0.21 + CH]         # on bed drop-zone
+
+cube = bb.createBody(shape="box", halfExtent=[CH, CH, CH],
+    position=LOC_A, color=0xff4500, mass=0)
+
+# ============================================================
+# IV STAND  — MOVEABLE GROUP  (anchor IVX, IVY)
+# ============================================================
+iv_parts = []
+IVX=-0.9; IVY=BW/2+0.35
+
+_mk(iv_parts, [0.018,0.018,0.98], [IVX,IVY,0.98], 0xbbbbbb)
+_mk(iv_parts, [0.28,0.032,0.016], [IVX,IVY,0.018], 0xaaaaaa)
+_mk(iv_parts, [0.032,0.28,0.016], [IVX,IVY,0.018], 0xaaaaaa)
+_mk(iv_parts, [0.072,0.022,0.115], [IVX,IVY,1.87], 0xc8e6ff)
+_mk(iv_parts, [0.006,0.006,0.48], [IVX+0.01,IVY-0.02,1.28], 0xaaffaa)
+_mk(iv_parts, [0.07,0.04,0.08], [IVX,IVY,1.35], 0x2255aa)
+
+# ============================================================
+# VITAL SIGNS MONITOR  — MOVEABLE GROUP  (anchor MNX, MNY)
+# ============================================================
+mon_parts = []
+MNX=-1.7; MNY=-(BW/2+0.35)
+
+_mk(mon_parts, [0.02,0.02,0.62], [MNX,MNY,0.62], 0x777777)
+_mk(mon_parts, [0.16,0.16,0.025], [MNX,MNY,0.025], 0x666666)
+_mk(mon_parts, [0.28,0.05,0.22], [MNX,MNY,1.38], 0x1a1a2e)
+_mk(mon_parts, [0.25,0.02,0.18], [MNX,MNY-0.04,1.38], 0x003300)
+for k in range(6):
+    h=0.03 if k==2 else 0.008
+    _mk(mon_parts, [0.022,0.004,h], [MNX-0.12+k*0.048,MNY-0.045,1.4+h], 0x00ff55)
+for k in range(5):
+    _mk(mon_parts, [0.02,0.004,0.007], [MNX-0.1+k*0.05,MNY-0.045,1.22], 0x4488ff)
+
+# ============================================================
+# CRASH CART  — MOVEABLE GROUP  (anchor CCX, CCY)
+# ============================================================
+cart_parts = []
+CCX=3.8; CCY=RW/2-1.5
+
+_mk(cart_parts, [0.28,0.22,0.58], [CCX,CCY,0.58], 0xdd2222)
+_mk(cart_parts, [0.28,0.22,0.04], [CCX,CCY,1.2], 0xcc1111)
+_mk(cart_parts, [0.18,0.04,0.12], [CCX,CCY-0.22,0.9], 0x111111)
+for dz2 in [0.22,0.45,0.72]:
+    _mk(cart_parts, [0.26,0.005,0.09], [CCX,CCY-0.225,dz2], 0xcc1111)
+    _mk(cart_parts, [0.04,0.015,0.015], [CCX,CCY-0.238,dz2+0.045], 0xd4af37)
+for cwx,cwy in [(-0.22,-0.18),(-0.22,0.18),(0.22,-0.18),(0.22,0.18)]:
+    _mk(cart_parts, [0.04,0.03,0.04], [CCX+cwx,CCY+cwy,0.04], 0x111111)
+
+# ============================================================
+# OXYGEN TANK  — MOVEABLE GROUP  (anchor OXX, OXY)
+# ============================================================
+o2_parts = []
+OXX=-1.4; OXY=BW/2+0.6
+
+_mk(o2_parts, [0.07,0.07,0.52], [OXX,OXY,0.52], 0x228b22)
+_mk(o2_parts, [0.05,0.05,0.08], [OXX,OXY,1.12], 0x1a6b1a)
+_mk(o2_parts, [0.08,0.04,0.04], [OXX,OXY,1.3], 0x888888)
+
+# ============================================================
+# MEDICINE CABINET  — STATIC
+# ============================================================
+MCX=3.5; MCY=-RW/2+0.16
+bb.createBody(shape="box", halfExtent=[0.5,0.18,0.72],
+    position=[MCX,MCY,1.06], color=0xf8f8f8, mass=0)
+bb.createBody(shape="box", halfExtent=[0.48,0.008,0.7],
+    position=[MCX,MCY-0.188,1.06], color=0xe0e0e0, mass=0)
+bb.createBody(shape="box", halfExtent=[0.12,0.009,0.038],
+    position=[MCX,MCY-0.196,1.3], color=0xff2222, mass=0)
+bb.createBody(shape="box", halfExtent=[0.038,0.009,0.12],
+    position=[MCX,MCY-0.196,1.3], color=0xff2222, mass=0)
+for sz in [0.75,1.05,1.35]:
+    bb.createBody(shape="box", halfExtent=[0.46,0.16,0.008],
+        position=[MCX,MCY,sz], color=0xeeeeee, mass=0)
+
+# ============================================================
+# SINK + MIRROR  — STATIC
+# ============================================================
+SKX=-3.8; SKY=-RW/2+0.2
+bb.createBody(shape="box", halfExtent=[0.3,0.22,0.4],
+    position=[SKX,SKY,0.4], color=0xf5f5f5, mass=0)
+bb.createBody(shape="box", halfExtent=[0.28,0.2,0.016],
+    position=[SKX,SKY,0.83], color=0xffffff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.2,0.16,0.058],
+    position=[SKX,SKY,0.798], color=0xd8eeff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.012,0.012,0.1],
+    position=[SKX,SKY-0.11,0.96], color=0xcccccc, mass=0)
+bb.createBody(shape="box", halfExtent=[0.038,0.012,0.012],
+    position=[SKX,SKY-0.12,1.06], color=0xcccccc, mass=0)
+bb.createBody(shape="box", halfExtent=[0.025,0.025,0.065],
+    position=[SKX+0.2,SKY-0.1,0.895], color=0x87ceeb, mass=0)
+bb.createBody(shape="box", halfExtent=[0.27,0.012,0.32],
+    position=[SKX,SKY-0.214,1.32], color=0xaaaaaa, mass=0)
+bb.createBody(shape="box", halfExtent=[0.25,0.008,0.30],
+    position=[SKX,SKY-0.212,1.32], color=0xd0eef8, mass=0)
+
+# ============================================================
+# OVERHEAD SURGICAL LIGHT  — STATIC
+# ============================================================
+bb.createBody(shape="box", halfExtent=[0.55,0.55,0.04],
+    position=[0,0,RH-0.04], color=0xffffff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.48,0.48,0.025],
+    position=[0,0,RH-0.09], color=0xffffee, mass=0)
+bb.createBody(shape="box", halfExtent=[0.016,0.016,0.38],
+    position=[0,0,RH-0.47], color=0x888888, mass=0)
+for lx2 in [-2.5,2.5]:
+    bb.createBody(shape="box", halfExtent=[0.08,1.2,0.02],
+        position=[lx2,0,RH-0.02], color=0xfff8ee, mass=0)
+
+# ============================================================
+# WALL CLOCK  — STATIC
+# ============================================================
+bb.createBody(shape="box", halfExtent=[0.16,0.03,0.16],
+    position=[2.0,-RW/2+0.06,2.5], color=0xffffff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.005,0.022,0.08],
+    position=[2.0,-RW/2+0.032,2.54], color=0x333333, mass=0)
+bb.createBody(shape="box", halfExtent=[0.07,0.022,0.005],
+    position=[2.04,-RW/2+0.032,2.5], color=0x333333, mass=0)
+
+# ============================================================
+# WHITEBOARD  — STATIC
+# ============================================================
+bb.createBody(shape="box", halfExtent=[0.42,0.022,0.34],
+    position=[-2.0,-RW/2+0.022,1.8], color=0x888888, mass=0)
+bb.createBody(shape="box", halfExtent=[0.40,0.018,0.32],
+    position=[-2.0,-RW/2+0.03,1.8], color=0xffffff, mass=0)
+for k in range(4):
+    bb.createBody(shape="box", halfExtent=[0.36,0.02,0.007],
+        position=[-2.0,-RW/2+0.05,1.62+k*0.1], color=0x3366cc, mass=0)
+bb.createBody(shape="box", halfExtent=[0.42,0.03,0.018],
+    position=[-2.0,-RW/2+0.04,1.48], color=0x888888, mass=0)
+for mk in range(3):
+    bb.createBody(shape="box", halfExtent=[0.008,0.008,0.055],
+        position=[-2.1+mk*0.12,-RW/2+0.04,1.50],
+        color=[0x2244cc,0xff2222,0x229922][mk], mass=0)
+
+# ============================================================
+# WASTE BINS  — STATIC
+# ============================================================
+bb.createBody(shape="box", halfExtent=[0.12,0.12,0.18],
+    position=[0.6,RBY-0.5,0.18], color=0xcc1111, mass=0)
+bb.createBody(shape="box", halfExtent=[0.125,0.125,0.018],
+    position=[0.6,RBY-0.5,0.375], color=0xaa0000, mass=0)
+bb.createBody(shape="box", halfExtent=[0.1,0.1,0.16],
+    position=[0.6,RBY-0.72,0.16], color=0xccaa00, mass=0)
+bb.createBody(shape="box", halfExtent=[0.13,0.13,0.2],
+    position=[-2.6,RBY-0.4,0.2], color=0x2a2a2a, mass=0)
+
+# ============================================================
+# OPERATOR / NURSE WORKSTATION  — STATIC
+# ============================================================
+OPX=-3.6; OPY=RW/2-1.6
+bb.createBody(shape="box", halfExtent=[0.80,0.40,0.032],
+    position=[OPX,OPY,0.768], color=0x8b6343, mass=0)
+for odx in [-0.72,0.72]:
+    for ody in [-0.36,0.36]:
+        bb.createBody(shape="box", halfExtent=[0.036,0.036,0.384],
+            position=[OPX+odx,OPY+ody,0.384], color=0x5c4033, mass=0)
+bb.createBody(shape="box", halfExtent=[0.28,0.34,0.34],
+    position=[OPX+0.46,OPY,0.34], color=0x9e7b55, mass=0)
+for dz3 in [0.18,0.40,0.62]:
+    bb.createBody(shape="box", halfExtent=[0.27,0.005,0.08],
+        position=[OPX+0.46,OPY-0.345,dz3], color=0x7a5c3a, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.04,0.015,0.015],
+        position=[OPX+0.46,OPY-0.36,dz3+0.04], color=0xd4af37, mass=0)
+bb.createBody(shape="box", halfExtent=[0.36,0.05,0.24],
+    position=[OPX-0.12,OPY+0.30,1.10], color=0x111111, mass=0)
+bb.createBody(shape="box", halfExtent=[0.33,0.018,0.20],
+    position=[OPX-0.12,OPY+0.31,1.10], color=0x001a33, mass=0)
+for k in range(7):
+    bb.createBody(shape="box", halfExtent=[0.28,0.005,0.008],
+        position=[OPX-0.12,OPY+0.332,0.93+k*0.055], color=0x00aaff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.20,0.005,0.06],
+    position=[OPX-0.12,OPY+0.332,1.22], color=0x00ff88, mass=0)
+bb.createBody(shape="box", halfExtent=[0.08,0.005,0.06],
+    position=[OPX+0.14,OPY+0.332,1.22], color=0xff6600, mass=0)
+bb.createBody(shape="box", halfExtent=[0.036,0.036,0.15],
+    position=[OPX-0.12,OPY+0.30,0.918], color=0x333333, mass=0)
+bb.createBody(shape="box", halfExtent=[0.10,0.08,0.012],
+    position=[OPX-0.12,OPY+0.30,0.782], color=0x333333, mass=0)
+bb.createBody(shape="box", halfExtent=[0.28,0.045,0.20],
+    position=[OPX+0.42,OPY+0.28,1.08], color=0x111111, mass=0)
+bb.createBody(shape="box", halfExtent=[0.25,0.016,0.17],
+    position=[OPX+0.42,OPY+0.295,1.08], color=0x001122, mass=0)
+for k in range(5):
+    bb.createBody(shape="box", halfExtent=[0.20,0.004,0.007],
+        position=[OPX+0.42,OPY+0.314,0.945+k*0.055], color=0x4488ff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.028,0.028,0.12],
+    position=[OPX+0.42,OPY+0.28,0.908], color=0x333333, mass=0)
+bb.createBody(shape="box", halfExtent=[0.08,0.06,0.010],
+    position=[OPX+0.42,OPY+0.28,0.782], color=0x333333, mass=0)
+bb.createBody(shape="box", halfExtent=[0.20,0.085,0.012],
+    position=[OPX-0.12,OPY-0.05,0.800], color=0x1a1a1a, mass=0)
+for row in range(4):
+    for col in range(10):
+        bb.createBody(shape="box", halfExtent=[0.008,0.007,0.005],
+            position=[OPX-0.28+col*0.038, OPY-0.05+row*0.018, 0.815],
+            color=0x333333, mass=0)
+bb.createBody(shape="box", halfExtent=[0.030,0.022,0.012],
+    position=[OPX+0.18,OPY-0.05,0.800], color=0x222222, mass=0)
+bb.createBody(shape="box", halfExtent=[0.028,0.010,0.004],
+    position=[OPX+0.18,OPY-0.065,0.814], color=0x111111, mass=0)
+bb.createBody(shape="box", halfExtent=[0.10,0.22,0.22],
+    position=[OPX-0.62,OPY+0.12,0.22], color=0x1a1a2e, mass=0)
+for dbz in [0.32,0.38]:
+    bb.createBody(shape="box", halfExtent=[0.09,0.005,0.025],
+        position=[OPX-0.62,OPY-0.105,dbz], color=0x333355, mass=0)
+bb.createBody(shape="box", halfExtent=[0.006,0.006,0.006],
+    position=[OPX-0.62,OPY-0.108,0.28], color=0x00ff44, mass=0)
+bb.createBody(shape="box", halfExtent=[0.36,0.36,0.062],
+    position=[OPX,OPY-1.0,0.48], color=0x1a1a2e, mass=0)
+bb.createBody(shape="box", halfExtent=[0.36,0.062,0.30],
+    position=[OPX,OPY-1.32,0.82], color=0x1a1a2e, mass=0)
+for odx,ody in [(-0.28,-0.28),(-0.28,0.28),(0.28,-0.28),(0.28,0.28)]:
+    bb.createBody(shape="box", halfExtent=[0.034,0.034,0.24],
+        position=[OPX+odx,OPY-1.0+ody,0.24], color=0x0d0d1a, mass=0)
+for arx in [-0.34,0.34]:
+    bb.createBody(shape="box", halfExtent=[0.032,0.10,0.018],
+        position=[OPX+arx,OPY-1.0,0.60], color=0x222244, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.032,0.032,0.12],
+        position=[OPX+arx,OPY-0.92,0.54], color=0x222244, mass=0)
+
+# ============================================================
+# SECONDARY WORKSTATION  — STATIC
+# ============================================================
+WS2X=3.6; WS2Y=-RW/2+0.5
+bb.createBody(shape="box", halfExtent=[0.55,0.32,0.028],
+    position=[WS2X,WS2Y,0.758], color=0x7a6248, mass=0)
+for odx2 in [-0.48,0.48]:
+    for ody2 in [-0.28,0.28]:
+        bb.createBody(shape="box", halfExtent=[0.030,0.030,0.38],
+            position=[WS2X+odx2,WS2Y+ody2,0.38], color=0x5a4535, mass=0)
+bb.createBody(shape="box", halfExtent=[0.30,0.045,0.20],
+    position=[WS2X,WS2Y+0.26,1.06], color=0x111111, mass=0)
+bb.createBody(shape="box", halfExtent=[0.27,0.015,0.17],
+    position=[WS2X,WS2Y+0.275,1.06], color=0x001122, mass=0)
+for k in range(5):
+    bb.createBody(shape="box", halfExtent=[0.22,0.004,0.007],
+        position=[WS2X,WS2Y+0.294,0.93+k*0.055], color=0x00ccff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.030,0.030,0.13],
+    position=[WS2X,WS2Y+0.26,0.888], color=0x333333, mass=0)
+bb.createBody(shape="box", halfExtent=[0.17,0.075,0.010],
+    position=[WS2X,WS2Y-0.02,0.778], color=0x1a1a1a, mass=0)
+bb.createBody(shape="box", halfExtent=[0.20,0.20,0.040],
+    position=[WS2X,WS2Y-0.80,0.58], color=0x336699, mass=0)
+for sdx,sdy in [(-0.15,-0.15),(-0.15,0.15),(0.15,-0.15),(0.15,0.15)]:
+    bb.createBody(shape="box", halfExtent=[0.025,0.025,0.29],
+        position=[WS2X+sdx,WS2Y-0.80+sdy,0.29], color=0x777777, mass=0)
+
+# ============================================================
+# MEDICATION PREPARATION COUNTER  — STATIC
+# ============================================================
+MPX=-2.5; MPY=-RW/2+0.28
+bb.createBody(shape="box", halfExtent=[0.70,0.26,0.04],
+    position=[MPX,MPY,0.90], color=0xf0f0f0, mass=0)
+bb.createBody(shape="box", halfExtent=[0.68,0.24,0.44],
+    position=[MPX,MPY,0.46], color=0xe8e8e8, mass=0)
+for dz4 in [0.22,0.52,0.78]:
+    bb.createBody(shape="box", halfExtent=[0.66,0.005,0.09],
+        position=[MPX,MPY-0.245,dz4], color=0xd0d0d0, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.06,0.015,0.015],
+        position=[MPX,MPY-0.262,dz4+0.045], color=0xc0c0c0, mass=0)
+for bx5,by5,col in [(-2.7,-3.6,0xffffff),(-2.5,-3.6,0x88ccff),(-2.3,-3.6,0xffee88)]:
+    bb.createBody(shape="box", halfExtent=[0.022,0.022,0.042],
+        position=[bx5,MPY-0.05,0.98], color=col, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.010,0.010,0.010],
+        position=[bx5,MPY-0.05,1.032], color=0x888888, mass=0)
+bb.createBody(shape="box", halfExtent=[0.045,0.035,0.065],
+    position=[MPX+0.55,MPY-0.05,0.985], color=0xffcc00, mass=0)
+bb.createBody(shape="box", halfExtent=[0.042,0.032,0.012],
+    position=[MPX+0.55,MPY-0.05,1.062], color=0xff8800, mass=0)
+
+# ============================================================
+# TABLET / TABLET STAND  — STATIC
+# ============================================================
+bb.createBody(shape="box", halfExtent=[0.14,0.012,0.20],
+    position=[-BL/2-0.20, 0.0, BH+0.40], color=0x222222, mass=0)
+bb.createBody(shape="box", halfExtent=[0.12,0.005,0.17],
+    position=[-BL/2-0.20, 0.01, BH+0.40], color=0x001a33, mass=0)
+for k in range(4):
+    bb.createBody(shape="box", halfExtent=[0.09,0.003,0.007],
+        position=[-BL/2-0.20,0.016,BH+0.30+k*0.06], color=0x00aaff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.012,0.012,0.22],
+    position=[-BL/2-0.20,-0.06,BH+0.22], color=0x888888, mass=0)
+bb.createBody(shape="box", halfExtent=[0.12,0.10,0.010],
+    position=[-BL/2-0.20,-0.06,BH+0.11], color=0x666666, mass=0)
+
+# ============================================================
+# NETWORK RACK  — STATIC
+# ============================================================
+NRX=-4.5; NRY=RW/2-0.5
+bb.createBody(shape="box", halfExtent=[0.30,0.28,0.90],
+    position=[NRX,NRY,0.90], color=0x1a1a1a, mass=0)
+bb.createBody(shape="box", halfExtent=[0.28,0.005,0.88],
+    position=[NRX,NRY-0.285,0.90], color=0x111111, mass=0)
+for k in range(8):
+    bb.createBody(shape="box", halfExtent=[0.26,0.004,0.036],
+        position=[NRX,NRY-0.288,0.28+k*0.20], color=0x2244aa, mass=0)
+    col_led = 0x00ff44 if k % 3 != 0 else 0xff8800
+    bb.createBody(shape="box", halfExtent=[0.006,0.006,0.006],
+        position=[NRX-0.22,NRY-0.292,0.30+k*0.20], color=col_led, mass=0)
+bb.createBody(shape="box", halfExtent=[0.28,0.04,0.04],
+    position=[NRX,NRY-0.25,1.84], color=0x333333, mass=0)
+
+# ============================================================
+# EMERGENCY CALL PANEL  — STATIC
+# ============================================================
+bb.createBody(shape="box", halfExtent=[0.12,0.025,0.18],
+    position=[dw/2+0.55, RW/2-0.025, 1.60], color=0xffffff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.10,0.010,0.16],
+    position=[dw/2+0.55, RW/2-0.030, 1.60], color=0xffe0e0, mass=0)
+bb.createBody(shape="box", halfExtent=[0.06,0.015,0.06],
+    position=[dw/2+0.55, RW/2-0.038, 1.70], color=0xff0000, mass=0)
+bb.createBody(shape="box", halfExtent=[0.06,0.015,0.04],
+    position=[dw/2+0.55, RW/2-0.038, 1.54], color=0x00aa00, mass=0)
+
+# ============================================================
+# VACUUM ROBOT  (animated)
+# ============================================================
+vac_x=-3.5; vac_y=-3.0
+vac_body = bb.createBody(shape="box", halfExtent=[0.17,0.17,0.045],
+    position=[vac_x,vac_y,0.045], color=0x2c2c2c, mass=0)
+bb.createBody(shape="box", halfExtent=[0.10,0.10,0.025],
+    position=[vac_x,vac_y,0.115], color=0x444444, mass=0)
+vac_light = bb.createBody(shape="box", halfExtent=[0.025,0.025,0.018],
+    position=[vac_x,vac_y,0.14], color=0x00ff44, mass=0)
+bb.createBody(shape="box", halfExtent=[0.155,0.016,0.028],
+    position=[vac_x,vac_y-0.168,0.028], color=0x555555, mass=0)
+vac_path=[[-3.5,-3.0],[3.5,-3.0],[3.5,-1.5],[1.5,-1.5],
+          [1.5,3.0],[-1.5,3.0],[-1.5,-1.5],[-3.5,-1.5],
+          [-3.5,3.0],[3.5,3.0],[3.5,1.5],[-3.5,1.5],[-3.5,-3.0]]
+vac_wp=0; vac_spd=0.018
+
+# ============================================================
+#  DA VINCI SURGICAL ROBOT  (animated)
+# ============================================================
+SRX = 2.8; SRY = 2.2
+
+bb.createBody(shape="box", halfExtent=[0.80,0.45,0.38],
+    position=[SRX, SRY, 0.38], color=0xd8dde0, mass=0)
+bb.createBody(shape="box", halfExtent=[0.78,0.43,0.025],
+    position=[SRX, SRY, 0.78], color=0x88ccaa, mass=0)
+for tlx, tly in [(-0.65,-0.35),(-0.65,0.35),(0.65,-0.35),(0.65,0.35)]:
+    bb.createBody(shape="box", halfExtent=[0.04,0.04,0.38],
+        position=[SRX+tlx, SRY+tly, 0.38], color=0x888888, mass=0)
+bb.createBody(shape="box", halfExtent=[0.20,0.15,0.003],
+    position=[SRX, SRY, 0.808], color=0xffcccc, mass=0)
+try:
+    bb.createDebugText("", [SRX, SRY-0.8, 2.2],
+        color='blue', size=0.9)
+except: pass
+
+bb.createBody(shape="box", halfExtent=[0.18,0.18,0.95],
+    position=[SRX, SRY+0.75, 0.95], color=0x2a2a3e, mass=0)
+bb.createBody(shape="box", halfExtent=[0.22,0.22,0.03],
+    position=[SRX, SRY+0.75, 1.93], color=0x3a3a4e, mass=0)
+bb.createBody(shape="box", halfExtent=[0.28,0.28,0.04],
+    position=[SRX, SRY+0.75, 0.04], color=0x444444, mass=0)
+for lz in [0.5, 1.0, 1.5]:
+    bb.createBody(shape="box", halfExtent=[0.008,0.008,0.008],
+        position=[SRX-0.19, SRY+0.75, lz], color=0x00ff44, mass=0)
+
+s1_shoulder = bb.createBody(shape="box", halfExtent=[0.06,0.06,0.06],
+    position=[SRX-0.15, SRY+0.75, 1.90], color=0x555577, mass=0)
+s1_upper = bb.createBody(shape="box", halfExtent=[0.025,0.025,0.28],
+    position=[SRX-0.30, SRY+0.30, 1.60], color=0x6666aa, mass=0)
+s1_lower = bb.createBody(shape="box", halfExtent=[0.020,0.020,0.22],
+    position=[SRX-0.20, SRY+0.05, 1.20], color=0x6666aa, mass=0)
+s1_tool  = bb.createBody(shape="box", halfExtent=[0.008,0.008,0.12],
+    position=[SRX-0.10, SRY, 0.95], color=0xcccccc, mass=0)
+s1_grip_L = bb.createBody(shape="box", halfExtent=[0.015,0.004,0.025],
+    position=[SRX-0.10, SRY-0.01, 0.82], color=0xaaaacc, mass=0)
+s1_grip_R = bb.createBody(shape="box", halfExtent=[0.015,0.004,0.025],
+    position=[SRX-0.10, SRY+0.01, 0.82], color=0xaaaacc, mass=0)
+
+s2_shoulder = bb.createBody(shape="box", halfExtent=[0.06,0.06,0.06],
+    position=[SRX+0.15, SRY+0.75, 1.90], color=0x555577, mass=0)
+s2_upper = bb.createBody(shape="box", halfExtent=[0.025,0.025,0.28],
+    position=[SRX+0.30, SRY+0.30, 1.60], color=0x6666aa, mass=0)
+s2_lower = bb.createBody(shape="box", halfExtent=[0.020,0.020,0.22],
+    position=[SRX+0.20, SRY+0.05, 1.20], color=0x6666aa, mass=0)
+s2_tool  = bb.createBody(shape="box", halfExtent=[0.008,0.008,0.12],
+    position=[SRX+0.10, SRY, 0.95], color=0xcccccc, mass=0)
+s2_grip_L = bb.createBody(shape="box", halfExtent=[0.015,0.004,0.025],
+    position=[SRX+0.10, SRY-0.01, 0.82], color=0xaaaacc, mass=0)
+s2_grip_R = bb.createBody(shape="box", halfExtent=[0.015,0.004,0.025],
+    position=[SRX+0.10, SRY+0.01, 0.82], color=0xaaaacc, mass=0)
+
+s3_shoulder = bb.createBody(shape="box", halfExtent=[0.05,0.05,0.05],
+    position=[SRX, SRY+0.75, 1.90], color=0x555577, mass=0)
+s3_boom = bb.createBody(shape="box", halfExtent=[0.018,0.018,0.35],
+    position=[SRX, SRY+0.30, 1.55], color=0x888888, mass=0)
+s3_cam  = bb.createBody(shape="box", halfExtent=[0.03,0.03,0.04],
+    position=[SRX, SRY, 1.10], color=0x222222, mass=0)
+s3_lens = bb.createBody(shape="box", halfExtent=[0.015,0.015,0.008],
+    position=[SRX, SRY, 1.05], color=0x4488ff, mass=0)
+
+SCX = SRX + 1.5; SCY = SRY
+bb.createBody(shape="box", halfExtent=[0.50,0.45,0.50],
+    position=[SCX, SCY, 0.50], color=0x2a2a3e, mass=0)
+bb.createBody(shape="box", halfExtent=[0.48,0.43,0.025],
+    position=[SCX, SCY, 1.025], color=0x333355, mass=0)
+bb.createBody(shape="box", halfExtent=[0.25,0.08,0.20],
+    position=[SCX-0.10, SCY-0.35, 1.25], color=0x1a1a2e, mass=0)
+bb.createBody(shape="box", halfExtent=[0.22,0.04,0.16],
+    position=[SCX-0.10, SCY-0.38, 1.25], color=0x003322, mass=0)
+for mx in [-0.20, 0.20]:
+    bb.createBody(shape="box", halfExtent=[0.04,0.08,0.03],
+        position=[SCX+mx, SCY-0.15, 1.06], color=0x444466, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.015,0.015,0.10],
+        position=[SCX+mx, SCY-0.15, 1.16], color=0x888888, mass=0)
+
+VCX = SRX - 1.2; VCY = SRY + 0.5
+bb.createBody(shape="box", halfExtent=[0.30,0.25,0.55],
+    position=[VCX, VCY, 0.55], color=0x222233, mass=0)
+bb.createBody(shape="box", halfExtent=[0.36,0.04,0.26],
+    position=[VCX, VCY-0.22, 1.36], color=0x111111, mass=0)
+bb.createBody(shape="box", halfExtent=[0.33,0.02,0.23],
+    position=[VCX, VCY-0.24, 1.36], color=0x002211, mass=0)
+for vk in range(5):
+    bb.createBody(shape="box", halfExtent=[0.28,0.005,0.006],
+        position=[VCX, VCY-0.255, 1.18+vk*0.08], color=0x00ffaa, mass=0)
+bb.createBody(shape="box", halfExtent=[0.02,0.02,0.15],
+    position=[VCX, VCY-0.22, 1.05], color=0x333333, mass=0)
+
+# ============================================================
+# LOKOMAT ROBOTIC REHABILITATION EXOSKELETON  (animated)
+# ============================================================
+LKX = -3.0; LKY = 2.0
+try:
+    bb.createDebugText("", [LKX, LKY-0.8, 2.2],
+        color='orange', size=0.9)
+except: pass
+
+bb.createBody(shape="box", halfExtent=[0.50,0.35,0.12],
+    position=[LKX, LKY, 0.12], color=0x333333, mass=0)
+bb.createBody(shape="box", halfExtent=[0.48,0.30,0.008],
+    position=[LKX, LKY, 0.248], color=0x2a2a2a, mass=0)
+for lk in range(-2, 3):
+    bb.createBody(shape="box", halfExtent=[0.005,0.28,0.002],
+        position=[LKX+lk*0.15, LKY, 0.258], color=0x444444, mass=0)
+for rs in [-1, 1]:
+    bb.createBody(shape="box", halfExtent=[0.55,0.03,0.06],
+        position=[LKX, LKY+rs*0.38, 0.55], color=0xaaaaaa, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.03,0.03,0.30],
+        position=[LKX-0.50, LKY+rs*0.38, 0.40], color=0xaaaaaa, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.03,0.03,0.30],
+        position=[LKX+0.50, LKY+rs*0.38, 0.40], color=0xaaaaaa, mass=0)
+
+for ps in [-1, 1]:
+    bb.createBody(shape="box", halfExtent=[0.05,0.05,1.20],
+        position=[LKX+ps*0.55, LKY-0.35, 1.20], color=0x888888, mass=0)
+bb.createBody(shape="box", halfExtent=[0.60,0.06,0.05],
+    position=[LKX, LKY-0.35, 2.45], color=0x888888, mass=0)
+bb.createBody(shape="box", halfExtent=[0.08,0.08,0.10],
+    position=[LKX, LKY-0.35, 2.35], color=0x444444, mass=0)
+bb.createBody(shape="box", halfExtent=[0.005,0.005,0.45],
+    position=[LKX, LKY-0.10, 1.80], color=0x222222, mass=0)
+bb.createBody(shape="box", halfExtent=[0.14,0.10,0.18],
+    position=[LKX, LKY, 1.35], color=0x3366aa, mass=0)
+for hs in [-1, 1]:
+    bb.createBody(shape="box", halfExtent=[0.02,0.005,0.22],
+        position=[LKX+hs*0.10, LKY-0.05, 1.55], color=0x3355aa, mass=0)
+
+bb.createBody(shape="box", halfExtent=[0.13,0.09,0.25],
+    position=[LKX, LKY, 1.35], color=0xeeddcc, mass=0)
+bb.createBody(shape="box", halfExtent=[0.08,0.08,0.10],
+    position=[LKX, LKY, 1.70], color=0xeeddcc, mass=0)
+for sa in [-1, 1]:
+    bb.createBody(shape="box", halfExtent=[0.04,0.04,0.22],
+        position=[LKX+sa*0.20, LKY, 1.20], color=0xeeddcc, mass=0)
+
+bb.createBody(shape="box", halfExtent=[0.18,0.12,0.06],
+    position=[LKX, LKY, 1.05], color=0x666688, mass=0)
+
+lk_L_thigh = bb.createBody(shape="box", halfExtent=[0.035,0.035,0.22],
+    position=[LKX-0.10, LKY, 0.78], color=0x4488cc, mass=0)
+lk_L_shank = bb.createBody(shape="box", halfExtent=[0.030,0.030,0.20],
+    position=[LKX-0.10, LKY, 0.38], color=0x4488cc, mass=0)
+lk_L_foot  = bb.createBody(shape="box", halfExtent=[0.06,0.035,0.02],
+    position=[LKX-0.10, LKY, 0.27], color=0x333355, mass=0)
+lk_R_thigh = bb.createBody(shape="box", halfExtent=[0.035,0.035,0.22],
+    position=[LKX+0.10, LKY, 0.78], color=0x4488cc, mass=0)
+lk_R_shank = bb.createBody(shape="box", halfExtent=[0.030,0.030,0.20],
+    position=[LKX+0.10, LKY, 0.38], color=0x4488cc, mass=0)
+lk_R_foot  = bb.createBody(shape="box", halfExtent=[0.06,0.035,0.02],
+    position=[LKX+0.10, LKY, 0.27], color=0x333355, mass=0)
+
+for mx2 in [-0.10, 0.10]:
+    bb.createBody(shape="box", halfExtent=[0.04,0.05,0.04],
+        position=[LKX+mx2, LKY-0.06, 1.02], color=0x555577, mass=0)
+lk_L_knee_motor = bb.createBody(shape="box", halfExtent=[0.035,0.04,0.035],
+    position=[LKX-0.10, LKY-0.04, 0.58], color=0x555577, mass=0)
+lk_R_knee_motor = bb.createBody(shape="box", halfExtent=[0.035,0.04,0.035],
+    position=[LKX+0.10, LKY-0.04, 0.58], color=0x555577, mass=0)
+
+belt_markers = []
+for bm in range(6):
+    m = bb.createBody(shape="box", halfExtent=[0.005,0.28,0.003],
+        position=[LKX-0.40+bm*0.16, LKY, 0.254], color=0x555555, mass=0)
+    belt_markers.append(m)
+belt_offset = 0.0
+
+bb.createBody(shape="box", halfExtent=[0.15,0.04,0.25],
+    position=[LKX+0.65, LKY, 1.25], color=0x222233, mass=0)
+bb.createBody(shape="box", halfExtent=[0.13,0.02,0.20],
+    position=[LKX+0.65, LKY-0.045, 1.25], color=0x001a1a, mass=0)
+for ck in range(4):
+    bb.createBody(shape="box", halfExtent=[0.10,0.005,0.006],
+        position=[LKX+0.65, LKY-0.055, 1.10+ck*0.08], color=0x00ddff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.05,0.005,0.03],
+    position=[LKX+0.65, LKY-0.055, 1.40], color=0x00ff88, mass=0)
+bb.createBody(shape="box", halfExtent=[0.025,0.025,0.025],
+    position=[LKX+0.65, LKY-0.02, 1.52], color=0xff0000, mass=0)
+
+LK_HIP_HEIGHT  = 1.05
+LK_THIGH_LEN   = 0.44
+LK_SHANK_LEN   = 0.40
+LK_GAIT_SPEED  = 0.8
+LK_HIP_AMP     = 0.35
+LK_KNEE_AMP    = 0.45
+LK_BELT_SPEED  = 0.004
+
+# ============================================================
+# OUTSIDE ENHANCEMENTS
+# ============================================================
+
+# ── Ground / Parking Lot outside front ────────────────────────
+bb.createBody(shape="box", halfExtent=[8.0, 4.0, 0.02],
+    position=[0, RW/2+4.2, -0.02], color=0x555555, mass=0)
+# parking lines
+for pk in range(-3, 4):
+    bb.createBody(shape="box", halfExtent=[0.02, 1.8, 0.003],
+        position=[pk*2.0, RW/2+4.2, 0.003], color=0xffffff, mass=0)
+# lane centre line (dashed)
+for dl in range(-7, 8):
+    bb.createBody(shape="box", halfExtent=[0.35, 0.02, 0.003],
+        position=[dl*1.0, RW/2+2.1, 0.003], color=0xffcc00, mass=0)
+
+# ── Parked vehicles (simple box cars) ────────────────────────
+car_colors = [0x2244aa, 0xcc2222, 0x22aa44, 0x888888, 0xeeeeee]
+for ci, cx in enumerate([-4.0, -2.0, 2.0, 4.0]):
+    cy = RW/2 + 5.0
+    cc = car_colors[ci % len(car_colors)]
+    bb.createBody(shape="box", halfExtent=[0.70, 0.40, 0.35],
+        position=[cx, cy, 0.35], color=cc, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.40, 0.38, 0.22],
+        position=[cx+0.05, cy, 0.72], color=cc, mass=0)
+    # windshield
+    bb.createBody(shape="box", halfExtent=[0.02, 0.34, 0.18],
+        position=[cx-0.35, cy, 0.72], color=0x88ccee, mass=0)
+    # wheels
+    for wx5, wy5 in [(-0.45,-0.40),(-0.45,0.40),(0.45,-0.40),(0.45,0.40)]:
+        bb.createBody(shape="box", halfExtent=[0.08, 0.05, 0.10],
+            position=[cx+wx5, cy+wy5, 0.10], color=0x111111, mass=0)
+
+# ── Ambulance Bay ─────────────────────────────────────────────
+AMB_X = 0.0; AMB_Y = RW/2 + 2.8
+# ambulance body
+bb.createBody(shape="box", halfExtent=[1.20, 0.55, 0.55],
+    position=[AMB_X, AMB_Y, 0.55], color=0xffffff, mass=0)
+# red stripe
+bb.createBody(shape="box", halfExtent=[1.22, 0.56, 0.04],
+    position=[AMB_X, AMB_Y, 0.72], color=0xff2222, mass=0)
+# cab
+bb.createBody(shape="box", halfExtent=[0.45, 0.53, 0.35],
+    position=[AMB_X-1.00, AMB_Y, 0.85], color=0xffffff, mass=0)
+# windshield
+bb.createBody(shape="box", halfExtent=[0.02, 0.48, 0.28],
+    position=[AMB_X-1.45, AMB_Y, 0.90], color=0x88ccee, mass=0)
+# wheels
+for awx, awy in [(-0.85,-0.55),(-0.85,0.55),(0.70,-0.55),(0.70,0.55)]:
+    bb.createBody(shape="box", halfExtent=[0.12, 0.06, 0.14],
+        position=[AMB_X+awx, AMB_Y+awy, 0.14], color=0x111111, mass=0)
+# cross symbol on side
+bb.createBody(shape="box", halfExtent=[0.06, 0.005, 0.16],
+    position=[AMB_X+0.5, AMB_Y-0.56, 0.72], color=0xff2222, mass=0)
+bb.createBody(shape="box", halfExtent=[0.16, 0.005, 0.06],
+    position=[AMB_X+0.5, AMB_Y-0.56, 0.72], color=0xff2222, mass=0)
+# animated flashing lights on roof
+amb_light_L = bb.createBody(shape="box", halfExtent=[0.06, 0.06, 0.04],
+    position=[AMB_X-0.75, AMB_Y-0.15, 1.24], color=0xff0000, mass=0)
+amb_light_R = bb.createBody(shape="box", halfExtent=[0.06, 0.06, 0.04],
+    position=[AMB_X-0.75, AMB_Y+0.15, 1.24], color=0x0000ff, mass=0)
+# light bar base
+bb.createBody(shape="box", halfExtent=[0.12, 0.22, 0.02],
+    position=[AMB_X-0.75, AMB_Y, 1.20], color=0xdddddd, mass=0)
+
+# ── Emergency entrance canopy ─────────────────────────────────
+for cpx2 in [-2.0, 2.0]:
+    bb.createBody(shape="box", halfExtent=[0.06, 0.06, 1.8],
+        position=[cpx2, RW/2+0.8, 1.8], color=0x888888, mass=0)
+bb.createBody(shape="box", halfExtent=[2.2, 1.0, 0.04],
+    position=[0, RW/2+0.8, 3.60], color=0xe0e0e0, mass=0)
+# canopy edge stripe
+bb.createBody(shape="box", halfExtent=[2.2, 0.02, 0.06],
+    position=[0, RW/2+1.8, 3.56], color=0xff2222, mass=0)
+try:
+    bb.createDebugText("EMERGENCY", [0, RW/2+1.82, 3.4],
+        color='red', size=0.8)
+except: pass
+
+# ── Helipad ───────────────────────────────────────────────────
+HELI_X = -5.0; HELI_Y = RW/2 + 6.0
+bb.createBody(shape="box", halfExtent=[2.0, 2.0, 0.03],
+    position=[HELI_X, HELI_Y, -0.01], color=0x444444, mass=0)
+# H marking
+bb.createBody(shape="box", halfExtent=[0.08, 0.65, 0.005],
+    position=[HELI_X-0.35, HELI_Y, 0.025], color=0xffffff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.08, 0.65, 0.005],
+    position=[HELI_X+0.35, HELI_Y, 0.025], color=0xffffff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.35, 0.08, 0.005],
+    position=[HELI_X, HELI_Y, 0.025], color=0xffffff, mass=0)
+# circle boundary markers
+for ha in range(12):
+    angle = ha * math.pi / 6
+    hx = HELI_X + 1.7 * math.cos(angle)
+    hy = HELI_Y + 1.7 * math.sin(angle)
+    bb.createBody(shape="box", halfExtent=[0.06, 0.06, 0.02],
+        position=[hx, hy, 0.02], color=0xffcc00, mass=0)
+# helipad beacon (animated)
+heli_beacon = bb.createBody(shape="box", halfExtent=[0.08, 0.08, 0.06],
+    position=[HELI_X, HELI_Y, 0.06], color=0x00ff00, mass=0)
+
+# ── Pathway lamps (along front of building) ──────────────────
+lamp_lights = []
+for lx3 in [-3.5, -1.5, 1.5, 3.5]:
+    ly3 = RW/2 + 1.0
+    bb.createBody(shape="box", halfExtent=[0.03, 0.03, 1.0],
+        position=[lx3, ly3, 1.0], color=0x555555, mass=0)
+    lmp = bb.createBody(shape="box", halfExtent=[0.06, 0.06, 0.04],
+        position=[lx3, ly3, 2.04], color=0xffee88, mass=0)
+    lamp_lights.append(lmp)
+    bb.createBody(shape="box", halfExtent=[0.08, 0.08, 0.01],
+        position=[lx3, ly3, 2.0], color=0x444444, mass=0)
+
+# ── Garden area & benches (right side of building) ────────────
+# grass patch
+bb.createBody(shape="box", halfExtent=[2.5, 1.5, 0.01],
+    position=[RL/2+2.8, 0, -0.01], color=0x44aa44, mass=0)
+# flower beds
+for fb in range(5):
+    bb.createBody(shape="box", halfExtent=[0.15, 0.15, 0.08],
+        position=[RL/2+1.5+fb*0.8, 1.0, 0.08], color=0x663300, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.12, 0.12, 0.06],
+        position=[RL/2+1.5+fb*0.8, 1.0, 0.16], color=[0xff4488,0xffaa22,0xff66cc,0xaa44ff,0xff8844][fb], mass=0)
+# benches
+for bx6 in [RL/2+2.0, RL/2+3.5]:
+    # seat
+    bb.createBody(shape="box", halfExtent=[0.35, 0.18, 0.02],
+        position=[bx6, -0.5, 0.45], color=0x8b6343, mass=0)
+    # backrest
+    bb.createBody(shape="box", halfExtent=[0.35, 0.02, 0.18],
+        position=[bx6, -0.68, 0.63], color=0x8b6343, mass=0)
+    # legs
+    for blx, bly in [(-0.28,-0.12),(0.28,-0.12),(-0.28,0.12),(0.28,0.12)]:
+        bb.createBody(shape="box", halfExtent=[0.02, 0.02, 0.22],
+            position=[bx6+blx, -0.5+bly, 0.22], color=0x444444, mass=0)
+# tree
+bb.createBody(shape="box", halfExtent=[0.08, 0.08, 0.8],
+    position=[RL/2+2.8, -1.0, 0.8], color=0x5c4033, mass=0)
+bb.createBody(shape="box", halfExtent=[0.45, 0.45, 0.35],
+    position=[RL/2+2.8, -1.0, 1.9], color=0x228b22, mass=0)
+bb.createBody(shape="box", halfExtent=[0.35, 0.35, 0.25],
+    position=[RL/2+2.8, -1.0, 2.3], color=0x2da02d, mass=0)
+
+# ── Flagpoles ─────────────────────────────────────────────────
+for fpx, fpc in [(-3.5, 0xff0000), (-2.5, 0xffffff), (-1.5, 0x0000ff)]:
+    fpy = RW/2 + 1.6
+    bb.createBody(shape="box", halfExtent=[0.02, 0.02, 2.0],
+        position=[fpx, fpy, 2.0], color=0xcccccc, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.18, 0.005, 0.12],
+        position=[fpx+0.18, fpy, 3.88], color=fpc, mass=0)
+
+# ── Walkway from parking to entrance ─────────────────────────
+bb.createBody(shape="box", halfExtent=[1.0, 1.2, 0.005],
+    position=[0, RW/2+1.3, 0.005], color=0xccbbaa, mass=0)
+# directional arrows on walkway
+for ay in [RW/2+0.6, RW/2+1.2, RW/2+1.8]:
+    bb.createBody(shape="box", halfExtent=[0.08, 0.02, 0.003],
+        position=[0, ay, 0.01], color=0x2266aa, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.02, 0.06, 0.003],
+        position=[0, ay-0.06, 0.01], color=0x2266aa, mass=0)
+
+# ============================================================
+# IMAGING ROOM  (adjacent, right side — 10 x 8 x 4 m)  BIGGER
+# ============================================================
+# The imaging room is attached to the right wall of the main room.
+# It has its own floor, walls, ceiling and a connecting doorway.
+IRL = 10.0; IRW = 8.0; IRH = RH
+IR_CX = RL/2 + IRL/2 + WT   # centre X of imaging room
+IR_CY = 0.0                   # centre Y (aligned with main room)
+IR_WALL_T = 0.18
+
+# Floor
+bb.createBody(shape="box", halfExtent=[IRL/2, IRW/2, 0.04],
+    position=[IR_CX, IR_CY, -0.04], color=0xe8e8f0, mass=0)
+# floor tiles
+for ti in range(-2, 3):
+    bb.createBody(shape="box", halfExtent=[IRL/2, 0.01, 0.002],
+        position=[IR_CX, IR_CY+ti*1.0, 0.002], color=0xd0d0dd, mass=0)
+for tj in range(-2, 4):
+    bb.createBody(shape="box", halfExtent=[0.01, IRW/2, 0.002],
+        position=[IR_CX-IRL/2+tj*1.0, IR_CY, 0.002], color=0xd0d0dd, mass=0)
+
+# Ceiling
+bb.createBody(shape="box", halfExtent=[IRL/2, IRW/2, 0.04],
+    position=[IR_CX, IR_CY, IRH+0.04], color=0xf5f5f5, mass=0)
+# ceiling lights
+for clx2 in [-2.5, 0.0, 2.5]:
+    for cly2 in [-1.5, 1.5]:
+        bb.createBody(shape="box", halfExtent=[0.45, 0.22, 0.01],
+            position=[IR_CX+clx2, IR_CY+cly2, IRH-0.01], color=0xffffff, mass=0)
+        bb.createBody(shape="box", halfExtent=[0.40, 0.18, 0.005],
+            position=[IR_CX+clx2, IR_CY+cly2, IRH-0.02], color=0xfffde0, mass=0)
+
+# Walls -- back (far X)
+bb.createBody(shape="box", halfExtent=[IR_WALL_T/2, IRW/2, IRH/2],
+    position=[IR_CX+IRL/2, IR_CY, IRH/2], color=0xdde0e8, mass=0)
+# front (near X) — has connecting doorway to main room
+# The connecting door is in the right wall of main room at Y ~ -0.5
+IR_DOOR_W = 1.6; IR_DOOR_H = 2.8
+# Sections of right wall of main room around the doorway
+ir_door_cy = IR_CY
+ir_sw_top = (IRH - IR_DOOR_H)
+ir_sw_side = (IRW - IR_DOOR_W) / 2
+# top above imaging room door (on main room's right wall)
+bb.createBody(shape="box", halfExtent=[IR_WALL_T/2, IR_DOOR_W/2, ir_sw_top/2],
+    position=[RL/2, ir_door_cy, IR_DOOR_H + ir_sw_top/2], color=0xeae6e0, mass=0)
+# side sections of imaging room front wall
+bb.createBody(shape="box", halfExtent=[IR_WALL_T/2, ir_sw_side/2, IRH/2],
+    position=[IR_CX-IRL/2-IR_WALL_T, IR_CY - IR_DOOR_W/2 - ir_sw_side/2, IRH/2], color=0xdde0e8, mass=0)
+bb.createBody(shape="box", halfExtent=[IR_WALL_T/2, ir_sw_side/2, IRH/2],
+    position=[IR_CX-IRL/2-IR_WALL_T, IR_CY + IR_DOOR_W/2 + ir_sw_side/2, IRH/2], color=0xdde0e8, mass=0)
+# top section above imaging room door
+bb.createBody(shape="box", halfExtent=[IR_WALL_T/2, IR_DOOR_W/2, ir_sw_top/2],
+    position=[IR_CX-IRL/2-IR_WALL_T, IR_CY, IR_DOOR_H + ir_sw_top/2], color=0xdde0e8, mass=0)
+# door frame
+for dfx in [-IR_DOOR_W/2, IR_DOOR_W/2]:
+    bb.createBody(shape="box", halfExtent=[0.04, 0.05, IR_DOOR_H/2],
+        position=[IR_CX-IRL/2-IR_WALL_T, IR_CY+dfx, IR_DOOR_H/2], color=0xb89a78, mass=0)
+bb.createBody(shape="box", halfExtent=[0.04, IR_DOOR_W/2, 0.04],
+    position=[IR_CX-IRL/2-IR_WALL_T, IR_CY, IR_DOOR_H], color=0xb89a78, mass=0)
+
+# Side walls (top & bottom Y)
+bb.createBody(shape="box", halfExtent=[IRL/2, IR_WALL_T/2, IRH/2],
+    position=[IR_CX, IR_CY-IRW/2, IRH/2], color=0xdde0e8, mass=0)
+bb.createBody(shape="box", halfExtent=[IRL/2, IR_WALL_T/2, IRH/2],
+    position=[IR_CX, IR_CY+IRW/2, IRH/2], color=0xdde0e8, mass=0)
+
+# Room sign
+bb.createBody(shape="box", halfExtent=[0.60, 0.04, 0.12],
+    position=[IR_CX-IRL/2-IR_WALL_T, IR_CY, IR_DOOR_H+0.16], color=0x2255aa, mass=0)
+try:
+    bb.createDebugText("IMAGING", [IR_CX-IRL/2-IR_WALL_T+0.05, IR_CY, IR_DOOR_H+0.16],
+        color='white', size=0.7)
+except: pass
+
+# Lead-lined stripe (radiation shielding indicator)
+for lsy in [IR_CY-IRW/2, IR_CY+IRW/2]:
+    bb.createBody(shape="box", halfExtent=[IRL/2, 0.01, 0.04],
+        position=[IR_CX, lsy, 1.2], color=0x555555, mass=0)
+
+# ── Radiation warning signs ──────────────────────────────────
+for wsx2, wsy2 in [(IR_CX+IRL/2-0.02, IR_CY), (IR_CX, IR_CY-IRW/2+0.02)]:
+    bb.createBody(shape="box", halfExtent=[0.10, 0.005, 0.10],
+        position=[wsx2, wsy2, 1.8], color=0xffcc00, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.04, 0.006, 0.04],
+        position=[wsx2, wsy2, 1.8], color=0x111111, mass=0)
+
+# ============================================================
+# MRI SCANNER  (inside imaging room — animated)
+# ============================================================
+MRI_X = IR_CX + 2.0; MRI_Y = IR_CY - 1.0
+
+# Main bore housing (outer shell)
+bb.createBody(shape="box", halfExtent=[0.75, 0.70, 0.70],
+    position=[MRI_X, MRI_Y, 0.90], color=0xeeeef5, mass=0)
+# bore tunnel (darker centre, visual contrast)
+bb.createBody(shape="box", halfExtent=[0.78, 0.32, 0.32],
+    position=[MRI_X, MRI_Y, 0.90], color=0x333344, mass=0)
+# inner bore lining
+bb.createBody(shape="box", halfExtent=[0.80, 0.28, 0.28],
+    position=[MRI_X, MRI_Y, 0.90], color=0x555566, mass=0)
+# front ring detail
+bb.createBody(shape="box", halfExtent=[0.02, 0.68, 0.68],
+    position=[MRI_X-0.75, MRI_Y, 0.90], color=0xccccdd, mass=0)
+bb.createBody(shape="box", halfExtent=[0.02, 0.30, 0.30],
+    position=[MRI_X-0.75, MRI_Y, 0.90], color=0x444455, mass=0)
+# back ring detail
+bb.createBody(shape="box", halfExtent=[0.02, 0.68, 0.68],
+    position=[MRI_X+0.75, MRI_Y, 0.90], color=0xccccdd, mass=0)
+# base platform
+bb.createBody(shape="box", halfExtent=[0.80, 0.75, 0.10],
+    position=[MRI_X, MRI_Y, 0.10], color=0xdddddd, mass=0)
+
+# MRI Patient Table (animated — slides in and out)
+mri_table_base = bb.createBody(shape="box", halfExtent=[0.75, 0.22, 0.04],
+    position=[MRI_X-1.5, MRI_Y, 0.50], color=0xdedede, mass=0)
+mri_table_pad = bb.createBody(shape="box", halfExtent=[0.70, 0.20, 0.03],
+    position=[MRI_X-1.5, MRI_Y, 0.57], color=0xf0f8ff, mass=0)
+# table rail
+mri_table_rail_L = bb.createBody(shape="box", halfExtent=[0.75, 0.01, 0.015],
+    position=[MRI_X-1.5, MRI_Y-0.22, 0.48], color=0xaaaaaa, mass=0)
+mri_table_rail_R = bb.createBody(shape="box", halfExtent=[0.75, 0.01, 0.015],
+    position=[MRI_X-1.5, MRI_Y+0.22, 0.48], color=0xaaaaaa, mass=0)
+# patient body on table (moves with table)
+mri_patient_torso = bb.createBody(shape="box", halfExtent=[0.25, 0.14, 0.07],
+    position=[MRI_X-1.5, MRI_Y, 0.67], color=0xeeddcc, mass=0)
+mri_patient_head = bb.createBody(shape="box", halfExtent=[0.08, 0.08, 0.08],
+    position=[MRI_X-1.3, MRI_Y, 0.72], color=0xeeddcc, mass=0)
+mri_patient_legs = bb.createBody(shape="box", halfExtent=[0.30, 0.10, 0.06],
+    position=[MRI_X-1.9, MRI_Y, 0.65], color=0x4488cc, mass=0)
+
+# Animated magnetic ring (spins around bore)
+mri_ring_H = bb.createBody(shape="box", halfExtent=[0.02, 0.55, 0.04],
+    position=[MRI_X, MRI_Y, 0.90], color=0x6688ff, mass=0)
+mri_ring_V = bb.createBody(shape="box", halfExtent=[0.02, 0.04, 0.55],
+    position=[MRI_X, MRI_Y, 0.90], color=0x6688ff, mass=0)
+mri_ring2_H = bb.createBody(shape="box", halfExtent=[0.02, 0.50, 0.04],
+    position=[MRI_X+0.15, MRI_Y, 0.90], color=0x8888dd, mass=0)
+mri_ring2_V = bb.createBody(shape="box", halfExtent=[0.02, 0.04, 0.50],
+    position=[MRI_X+0.15, MRI_Y, 0.90], color=0x8888dd, mass=0)
+
+# MRI control console
+MRI_CON_X = MRI_X - 2.5; MRI_CON_Y = MRI_Y - 1.2
+bb.createBody(shape="box", halfExtent=[0.45, 0.30, 0.40],
+    position=[MRI_CON_X, MRI_CON_Y, 0.40], color=0x333344, mass=0)
+bb.createBody(shape="box", halfExtent=[0.43, 0.28, 0.02],
+    position=[MRI_CON_X, MRI_CON_Y, 0.82], color=0x444455, mass=0)
+# monitor
+bb.createBody(shape="box", halfExtent=[0.30, 0.04, 0.22],
+    position=[MRI_CON_X, MRI_CON_Y-0.26, 1.18], color=0x111122, mass=0)
+bb.createBody(shape="box", halfExtent=[0.27, 0.02, 0.18],
+    position=[MRI_CON_X, MRI_CON_Y-0.28, 1.18], color=0x001a33, mass=0)
+# MRI scan lines on screen (animated)
+mri_scan_line = bb.createBody(shape="box", halfExtent=[0.24, 0.005, 0.005],
+    position=[MRI_CON_X, MRI_CON_Y-0.30, 1.10], color=0x00ffaa, mass=0)
+# keyboard
+bb.createBody(shape="box", halfExtent=[0.20, 0.10, 0.012],
+    position=[MRI_CON_X, MRI_CON_Y, 0.845], color=0x1a1a2e, mass=0)
+# status LED
+mri_status_led = bb.createBody(shape="box", halfExtent=[0.012, 0.012, 0.012],
+    position=[MRI_CON_X+0.35, MRI_CON_Y-0.18, 0.84], color=0x00ff00, mass=0)
+
+MRI_TABLE_OUT = MRI_X - 1.5   # table fully out (patient visible)
+MRI_TABLE_IN  = MRI_X         # table fully inside bore
+MRI_SLIDE_SPEED = 0.3
+MRI_RING_SPEED  = 2.5
+MRI_SCAN_CYCLE  = 18.0        # seconds per full scan cycle
+
+# ============================================================
+# X-RAY MACHINE  (inside imaging room — animated)
+# ============================================================
+XR_X = IR_CX - 2.0; XR_Y = IR_CY + 1.5
+
+# Floor-mounted column
+bb.createBody(shape="box", halfExtent=[0.15, 0.15, 0.08],
+    position=[XR_X, XR_Y, 0.08], color=0x888888, mass=0)
+bb.createBody(shape="box", halfExtent=[0.06, 0.06, 1.20],
+    position=[XR_X, XR_Y, 1.20], color=0xaaaaaa, mass=0)
+# top rail
+bb.createBody(shape="box", halfExtent=[0.08, 0.08, 0.05],
+    position=[XR_X, XR_Y, 2.40], color=0x777777, mass=0)
+
+# Animated swinging arm + X-ray emitter head
+xr_arm = bb.createBody(shape="box", halfExtent=[0.40, 0.025, 0.025],
+    position=[XR_X+0.4, XR_Y, 2.30], color=0x888899, mass=0)
+xr_head = bb.createBody(shape="box", halfExtent=[0.10, 0.10, 0.08],
+    position=[XR_X+0.80, XR_Y, 2.22], color=0x444455, mass=0)
+# X-ray beam indicator (animated visibility — pulses)
+xr_beam = bb.createBody(shape="box", halfExtent=[0.06, 0.06, 0.40],
+    position=[XR_X+0.80, XR_Y, 1.70], color=0x44aaff, mass=0)
+# lens/emitter detail
+bb.createBody(shape="box", halfExtent=[0.04, 0.04, 0.01],
+    position=[XR_X+0.80, XR_Y, 2.14], color=0x888888, mass=0)
+
+# Patient table for X-ray
+bb.createBody(shape="box", halfExtent=[0.60, 0.30, 0.03],
+    position=[XR_X+0.3, XR_Y, 0.75], color=0xdddddd, mass=0)
+# table legs
+for tlx2, tly2 in [(-0.50,-0.25),(0.50,-0.25),(-0.50,0.25),(0.50,0.25)]:
+    bb.createBody(shape="box", halfExtent=[0.025, 0.025, 0.375],
+        position=[XR_X+0.3+tlx2, XR_Y+tly2, 0.375], color=0x999999, mass=0)
+# patient pad
+bb.createBody(shape="box", halfExtent=[0.55, 0.26, 0.02],
+    position=[XR_X+0.3, XR_Y, 0.80], color=0xf0f8ff, mass=0)
+
+# Animated detector panel (under table, moves with arm)
+xr_detector = bb.createBody(shape="box", halfExtent=[0.14, 0.14, 0.01],
+    position=[XR_X+0.80, XR_Y, 0.72], color=0x222233, mass=0)
+# detector detail
+bb.createBody(shape="box", halfExtent=[0.12, 0.12, 0.005],
+    position=[XR_X+0.80, XR_Y, 0.71], color=0x333355, mass=0)
+
+# X-ray patient (on the X-ray table)
+bb.createBody(shape="box", halfExtent=[0.22, 0.12, 0.06],
+    position=[XR_X+0.3, XR_Y, 0.88], color=0xeeddcc, mass=0)
+bb.createBody(shape="box", halfExtent=[0.07, 0.07, 0.07],
+    position=[XR_X+0.6, XR_Y, 0.90], color=0xeeddcc, mass=0)
+
+# X-ray viewer lightbox on wall
+XR_VIEW_X = IR_CX - IRL/2 + 0.3
+bb.createBody(shape="box", halfExtent=[0.35, 0.015, 0.28],
+    position=[XR_VIEW_X, IR_CY-IRW/2+0.02, 1.6], color=0xffffff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.30, 0.010, 0.24],
+    position=[XR_VIEW_X, IR_CY-IRW/2+0.025, 1.6], color=0xccddff, mass=0)
+# X-ray film silhouette (ribs)
+for rx in range(5):
+    bb.createBody(shape="box", halfExtent=[0.005, 0.008, 0.04],
+        position=[XR_VIEW_X-0.10+rx*0.05, IR_CY-IRW/2+0.03, 1.6], color=0xffffff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.005, 0.008, 0.12],
+    position=[XR_VIEW_X, IR_CY-IRW/2+0.03, 1.6], color=0xeeeeff, mass=0)
+
+# X-ray control panel
+XR_CTRL_X = XR_X - 0.8; XR_CTRL_Y = XR_Y - 1.5
+bb.createBody(shape="box", halfExtent=[0.25, 0.20, 0.55],
+    position=[XR_CTRL_X, XR_CTRL_Y, 0.55], color=0x333344, mass=0)
+bb.createBody(shape="box", halfExtent=[0.23, 0.18, 0.02],
+    position=[XR_CTRL_X, XR_CTRL_Y, 1.12], color=0x444455, mass=0)
+# small monitor
+bb.createBody(shape="box", halfExtent=[0.18, 0.03, 0.14],
+    position=[XR_CTRL_X, XR_CTRL_Y-0.18, 1.40], color=0x111122, mass=0)
+bb.createBody(shape="box", halfExtent=[0.15, 0.02, 0.11],
+    position=[XR_CTRL_X, XR_CTRL_Y-0.20, 1.40], color=0x001a22, mass=0)
+# buttons on control panel
+for bk in range(4):
+    bb.createBody(shape="box", halfExtent=[0.02, 0.02, 0.015],
+        position=[XR_CTRL_X-0.12+bk*0.08, XR_CTRL_Y, 1.14], color=[0x00ff00,0xff0000,0xffaa00,0x0088ff][bk], mass=0)
+# exposure indicator (animated)
+xr_expose_led = bb.createBody(shape="box", halfExtent=[0.015, 0.015, 0.015],
+    position=[XR_CTRL_X+0.18, XR_CTRL_Y-0.10, 1.14], color=0x00ff00, mass=0)
+
+XR_ARM_SWING_SPEED = 0.4
+XR_ARM_RANGE = 0.6       # how far arm swings in X
+XR_EXPOSE_INTERVAL = 8.0 # seconds between exposures
+XR_EXPOSE_DURATION = 1.5 # seconds the beam is "on"
+
+# ── Debug control for MRI/X-ray ──────────────────────────────
+bb.addDebugToggle('MRI_Active', True)
+bb.addDebugToggle('XRay_Active', True)
+
+# ============================================================
+# RECEPTION WARD  (adjacent, left side — 10 x 8 x 4 m)
+# ============================================================
+# Attached to the left wall of the main room, opposite the imaging room.
+REC_L = 10.0; REC_W = 8.0; REC_H = RH
+REC_CX = -RL/2 - REC_L/2 - WT   # centre X
+REC_CY = 0.0                      # centre Y (aligned)
+REC_WT = 0.18
+
+# Floor (polished look)
+bb.createBody(shape="box", halfExtent=[REC_L/2, REC_W/2, 0.04],
+    position=[REC_CX, REC_CY, -0.04], color=0xf0eeea, mass=0)
+# floor tiles
+for rti in range(-3, 4):
+    bb.createBody(shape="box", halfExtent=[REC_L/2, 0.01, 0.002],
+        position=[REC_CX, REC_CY+rti*1.0, 0.002], color=0xddddcc, mass=0)
+for rtj in range(-4, 6):
+    bb.createBody(shape="box", halfExtent=[0.01, REC_W/2, 0.002],
+        position=[REC_CX-REC_L/2+rtj*1.0, REC_CY, 0.002], color=0xddddcc, mass=0)
+
+# Ceiling
+bb.createBody(shape="box", halfExtent=[REC_L/2, REC_W/2, 0.04],
+    position=[REC_CX, REC_CY, REC_H+0.04], color=0xfafafa, mass=0)
+
+# Ceiling lights
+for rcx in [-2.5, 0.0, 2.5]:
+    for rcy in [-1.5, 1.5]:
+        bb.createBody(shape="box", halfExtent=[0.45, 0.22, 0.008],
+            position=[REC_CX+rcx, REC_CY+rcy, REC_H-0.01], color=0xffffff, mass=0)
+        bb.createBody(shape="box", halfExtent=[0.42, 0.19, 0.004],
+            position=[REC_CX+rcx, REC_CY+rcy, REC_H-0.016], color=0xfffde0, mass=0)
+
+# ── AC Units on ceiling ──────────────────────────────────────
+for acx, acy in [(-2.0, 0.0), (2.0, 0.0), (0.0, 2.5), (0.0, -2.5)]:
+    # AC body
+    bb.createBody(shape="box", halfExtent=[0.40, 0.40, 0.06],
+        position=[REC_CX+acx, REC_CY+acy, REC_H-0.06], color=0xf0f0f0, mass=0)
+    # AC front grille
+    bb.createBody(shape="box", halfExtent=[0.38, 0.38, 0.01],
+        position=[REC_CX+acx, REC_CY+acy, REC_H-0.12], color=0xe0e0e0, mass=0)
+    # grille slats
+    for gs in range(-3, 4):
+        bb.createBody(shape="box", halfExtent=[0.35, 0.008, 0.003],
+            position=[REC_CX+acx, REC_CY+acy+gs*0.08, REC_H-0.13], color=0xcccccc, mass=0)
+    # status light
+    bb.createBody(shape="box", halfExtent=[0.008, 0.008, 0.005],
+        position=[REC_CX+acx+0.35, REC_CY+acy, REC_H-0.13], color=0x00ff44, mass=0)
+
+# Walls
+# Back wall (far -X)
+bb.createBody(shape="box", halfExtent=[REC_WT/2, REC_W/2, REC_H/2],
+    position=[REC_CX-REC_L/2, REC_CY, REC_H/2], color=0xeae6e0, mass=0)
+# Top wall (+Y)
+bb.createBody(shape="box", halfExtent=[REC_L/2, REC_WT/2, REC_H/2],
+    position=[REC_CX, REC_CY+REC_W/2, REC_H/2], color=0xeae6e0, mass=0)
+# Bottom wall (-Y)
+bb.createBody(shape="box", halfExtent=[REC_L/2, REC_WT/2, REC_H/2],
+    position=[REC_CX, REC_CY-REC_W/2, REC_H/2], color=0xeae6e0, mass=0)
+# Front wall (near +X) — doorway connects to main room's left wall
+REC_DOOR_W = 2.0; REC_DOOR_H = 2.8
+rec_sw_side = (REC_W - REC_DOOR_W) / 2
+rec_sw_top = (REC_H - REC_DOOR_H)
+# side sections
+bb.createBody(shape="box", halfExtent=[REC_WT/2, rec_sw_side/2, REC_H/2],
+    position=[REC_CX+REC_L/2+REC_WT, REC_CY - REC_DOOR_W/2 - rec_sw_side/2, REC_H/2], color=0xeae6e0, mass=0)
+bb.createBody(shape="box", halfExtent=[REC_WT/2, rec_sw_side/2, REC_H/2],
+    position=[REC_CX+REC_L/2+REC_WT, REC_CY + REC_DOOR_W/2 + rec_sw_side/2, REC_H/2], color=0xeae6e0, mass=0)
+# top above door on front wall
+bb.createBody(shape="box", halfExtent=[REC_WT/2, REC_DOOR_W/2, rec_sw_top/2],
+    position=[REC_CX+REC_L/2+REC_WT, REC_CY, REC_DOOR_H + rec_sw_top/2], color=0xeae6e0, mass=0)
+# top above door on main room left wall
+bb.createBody(shape="box", halfExtent=[REC_WT/2, REC_DOOR_W/2, rec_sw_top/2],
+    position=[-RL/2, REC_CY, REC_DOOR_H + rec_sw_top/2], color=0xeae6e0, mass=0)
+# door frame
+for dfr in [-REC_DOOR_W/2, REC_DOOR_W/2]:
+    bb.createBody(shape="box", halfExtent=[0.04, 0.05, REC_DOOR_H/2],
+        position=[REC_CX+REC_L/2+REC_WT, REC_CY+dfr, REC_DOOR_H/2], color=0xb89a78, mass=0)
+bb.createBody(shape="box", halfExtent=[0.04, REC_DOOR_W/2, 0.04],
+    position=[REC_CX+REC_L/2+REC_WT, REC_CY, REC_DOOR_H], color=0xb89a78, mass=0)
+
+# Wall accent stripe
+for rsy in [REC_CY-REC_W/2, REC_CY+REC_W/2]:
+    bb.createBody(shape="box", halfExtent=[REC_L/2, 0.012, 0.055],
+        position=[REC_CX, rsy, 1.2], color=0x2c6fad, mass=0)
+bb.createBody(shape="box", halfExtent=[0.012, REC_W/2, 0.055],
+    position=[REC_CX-REC_L/2, REC_CY, 1.2], color=0x2c6fad, mass=0)
+
+# Room sign above door
+bb.createBody(shape="box", halfExtent=[0.70, 0.04, 0.12],
+    position=[REC_CX+REC_L/2+REC_WT, REC_CY, REC_DOOR_H+0.16], color=0x2c6fad, mass=0)
+try:
+    bb.createDebugText("RECEPTION", [REC_CX+REC_L/2+REC_WT+0.05, REC_CY, REC_DOOR_H+0.16],
+        color='white', size=0.7)
+except: pass
+
+# Skirting
+for rsy2 in [REC_CY-REC_W/2, REC_CY+REC_W/2]:
+    bb.createBody(shape="box", halfExtent=[REC_L/2, REC_WT/2, 0.05],
+        position=[REC_CX, rsy2, 0.05], color=0xd0ccc5, mass=0)
+bb.createBody(shape="box", halfExtent=[REC_WT/2, REC_W/2, 0.05],
+    position=[REC_CX-REC_L/2, REC_CY, 0.05], color=0xd0ccc5, mass=0)
+
+# ── Reception Desk (L-shaped counter) ────────────────────────
+RD_X = REC_CX + 2.5; RD_Y = REC_CY - 1.5
+# main counter front (the long part facing patients)
+bb.createBody(shape="box", halfExtent=[1.20, 0.20, 0.55],
+    position=[RD_X, RD_Y, 0.55], color=0x5c4033, mass=0)
+# counter top surface
+bb.createBody(shape="box", halfExtent=[1.22, 0.22, 0.025],
+    position=[RD_X, RD_Y, 1.125], color=0xf0e8d8, mass=0)
+# side wing of L
+bb.createBody(shape="box", halfExtent=[0.20, 0.60, 0.55],
+    position=[RD_X+1.20, RD_Y+0.60, 0.55], color=0x5c4033, mass=0)
+bb.createBody(shape="box", halfExtent=[0.22, 0.62, 0.025],
+    position=[RD_X+1.20, RD_Y+0.60, 1.125], color=0xf0e8d8, mass=0)
+# higher front panel (patient-facing)
+bb.createBody(shape="box", halfExtent=[1.20, 0.03, 0.18],
+    position=[RD_X, RD_Y-0.22, 1.28], color=0x4a3528, mass=0)
+# desk sign
+bb.createBody(shape="box", halfExtent=[0.40, 0.02, 0.08],
+    position=[RD_X, RD_Y-0.25, 1.38], color=0x2c6fad, mass=0)
+try:
+    bb.createDebugText("RECEPTION", [RD_X, RD_Y-0.28, 1.38],
+        color='white', size=0.4)
+except: pass
+
+# Computer on desk
+bb.createBody(shape="box", halfExtent=[0.20, 0.04, 0.16],
+    position=[RD_X-0.4, RD_Y+0.10, 1.30], color=0x111111, mass=0)
+bb.createBody(shape="box", halfExtent=[0.18, 0.02, 0.13],
+    position=[RD_X-0.4, RD_Y+0.12, 1.30], color=0x001a33, mass=0)
+# screen data lines
+for sk in range(5):
+    bb.createBody(shape="box", halfExtent=[0.14, 0.004, 0.006],
+        position=[RD_X-0.4, RD_Y+0.145, 1.20+sk*0.04], color=0x00aaff, mass=0)
+# monitor stand
+bb.createBody(shape="box", halfExtent=[0.025, 0.025, 0.08],
+    position=[RD_X-0.4, RD_Y+0.10, 1.08], color=0x333333, mass=0)
+bb.createBody(shape="box", halfExtent=[0.08, 0.06, 0.008],
+    position=[RD_X-0.4, RD_Y+0.10, 1.148], color=0x333333, mass=0)
+# keyboard
+bb.createBody(shape="box", halfExtent=[0.14, 0.06, 0.008],
+    position=[RD_X-0.4, RD_Y-0.02, 1.148], color=0x222222, mass=0)
+# phone
+bb.createBody(shape="box", halfExtent=[0.06, 0.04, 0.03],
+    position=[RD_X+0.5, RD_Y+0.08, 1.17], color=0x222222, mass=0)
+bb.createBody(shape="box", halfExtent=[0.025, 0.06, 0.015],
+    position=[RD_X+0.5, RD_Y+0.16, 1.16], color=0x333333, mass=0)
+# paper tray
+bb.createBody(shape="box", halfExtent=[0.10, 0.07, 0.02],
+    position=[RD_X+0.1, RD_Y+0.08, 1.17], color=0xeeeeee, mass=0)
+bb.createBody(shape="box", halfExtent=[0.08, 0.05, 0.012],
+    position=[RD_X+0.1, RD_Y+0.08, 1.152], color=0xffffff, mass=0)
+
+# ── Nurse figure (behind the desk) ───────────────────────────
+NURSE_X = RD_X; NURSE_Y = RD_Y + 0.50
+# body/torso (scrubs)
+bb.createBody(shape="box", halfExtent=[0.12, 0.08, 0.22],
+    position=[NURSE_X, NURSE_Y, 1.02], color=0x4488cc, mass=0)
+# head
+bb.createBody(shape="box", halfExtent=[0.07, 0.07, 0.08],
+    position=[NURSE_X, NURSE_Y, 1.32], color=0xeeddcc, mass=0)
+# hair
+bb.createBody(shape="box", halfExtent=[0.075, 0.075, 0.04],
+    position=[NURSE_X, NURSE_Y, 1.42], color=0x3a2a1a, mass=0)
+bb.createBody(shape="box", halfExtent=[0.04, 0.078, 0.06],
+    position=[NURSE_X, NURSE_Y+0.04, 1.36], color=0x3a2a1a, mass=0)
+# nurse cap
+bb.createBody(shape="box", halfExtent=[0.06, 0.015, 0.035],
+    position=[NURSE_X, NURSE_Y-0.06, 1.44], color=0xffffff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.02, 0.012, 0.015],
+    position=[NURSE_X, NURSE_Y-0.06, 1.46], color=0xff2222, mass=0)
+# arms
+for nside in [-1, 1]:
+    bb.createBody(shape="box", halfExtent=[0.035, 0.035, 0.18],
+        position=[NURSE_X+nside*0.16, NURSE_Y, 1.00], color=0x4488cc, mass=0)
+    # hands
+    bb.createBody(shape="box", halfExtent=[0.03, 0.03, 0.03],
+        position=[NURSE_X+nside*0.16, NURSE_Y, 0.80], color=0xeeddcc, mass=0)
+# legs
+for nside2 in [-1, 1]:
+    bb.createBody(shape="box", halfExtent=[0.04, 0.04, 0.24],
+        position=[NURSE_X+nside2*0.06, NURSE_Y, 0.56], color=0x4488cc, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.05, 0.035, 0.02],
+        position=[NURSE_X+nside2*0.06, NURSE_Y-0.02, 0.32], color=0xffffff, mass=0)
+# ID badge
+bb.createBody(shape="box", halfExtent=[0.025, 0.005, 0.035],
+    position=[NURSE_X-0.10, NURSE_Y-0.085, 1.15], color=0xffffff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.018, 0.004, 0.010],
+    position=[NURSE_X-0.10, NURSE_Y-0.088, 1.17], color=0x2266aa, mass=0)
+# stethoscope around neck
+bb.createBody(shape="box", halfExtent=[0.005, 0.005, 0.10],
+    position=[NURSE_X+0.08, NURSE_Y-0.06, 1.10], color=0x555555, mass=0)
+bb.createBody(shape="box", halfExtent=[0.02, 0.02, 0.012],
+    position=[NURSE_X+0.08, NURSE_Y-0.06, 0.99], color=0xaaaaaa, mass=0)
+
+# ── Waiting area — chairs with patients ──────────────────────
+# 2 rows of 4 chairs, some with patients
+CHAIR_POSITIONS = [
+    (REC_CX - 2.0, REC_CY - 2.0),
+    (REC_CX - 0.5, REC_CY - 2.0),
+    (REC_CX + 1.0, REC_CY - 2.0),
+    (REC_CX + 2.5, REC_CY - 2.0),
+    (REC_CX - 2.0, REC_CY + 2.0),
+    (REC_CX - 0.5, REC_CY + 2.0),
+    (REC_CX + 1.0, REC_CY + 2.0),
+    (REC_CX + 2.5, REC_CY + 2.0),
+]
+
+for ci2, (chx, chy) in enumerate(CHAIR_POSITIONS):
+    # Chair seat
+    bb.createBody(shape="box", halfExtent=[0.22, 0.22, 0.02],
+        position=[chx, chy, 0.44], color=0x336699, mass=0)
+    # Chair backrest
+    bb.createBody(shape="box", halfExtent=[0.22, 0.02, 0.22],
+        position=[chx, chy+0.22, 0.66], color=0x336699, mass=0)
+    # Chair legs
+    for clx3, cly3 in [(-0.18,-0.18),(0.18,-0.18),(-0.18,0.18),(0.18,0.18)]:
+        bb.createBody(shape="box", halfExtent=[0.018, 0.018, 0.22],
+            position=[chx+clx3, chy+cly3, 0.22], color=0x888888, mass=0)
+    # Armrests
+    for ars in [-1, 1]:
+        bb.createBody(shape="box", halfExtent=[0.018, 0.20, 0.015],
+            position=[chx+ars*0.22, chy, 0.56], color=0x888888, mass=0)
+        bb.createBody(shape="box", halfExtent=[0.018, 0.018, 0.08],
+            position=[chx+ars*0.22, chy-0.16, 0.50], color=0x888888, mass=0)
+
+# Patients sitting in chairs (on chairs 0,1,2,4,5,7)
+PATIENT_CHAIRS = [0, 1, 2, 4, 5, 7]
+PATIENT_COLORS = [0xeeddcc, 0xd4a574, 0xeeddcc, 0xd4a574, 0xeeddcc, 0xd4a574]
+SHIRT_COLORS   = [0x4488cc, 0x22aa44, 0xcc4444, 0xff8800, 0x8844cc, 0x44aaaa]
+PANT_COLORS    = [0x333355, 0x444444, 0x2a2a55, 0x334433, 0x555555, 0x333344]
+
+for pi, pci in enumerate(PATIENT_CHAIRS):
+    px2, py2 = CHAIR_POSITIONS[pci]
+    skin = PATIENT_COLORS[pi]
+    shirt = SHIRT_COLORS[pi]
+    pant = PANT_COLORS[pi]
+    # torso (sitting)
+    bb.createBody(shape="box", halfExtent=[0.10, 0.08, 0.18],
+        position=[px2, py2, 0.64], color=shirt, mass=0)
+    # head
+    bb.createBody(shape="box", halfExtent=[0.06, 0.06, 0.07],
+        position=[px2, py2, 0.89], color=skin, mass=0)
+    # hair
+    bb.createBody(shape="box", halfExtent=[0.065, 0.065, 0.03],
+        position=[px2, py2, 0.96], color=[0x3a2a1a,0x1a1a1a,0x8b6343,0x3a2a1a,0x1a1a1a,0x5c3a1a][pi], mass=0)
+    # upper legs (horizontal on seat)
+    for ls in [-1, 1]:
+        bb.createBody(shape="box", halfExtent=[0.04, 0.14, 0.035],
+            position=[px2+ls*0.06, py2-0.06, 0.475], color=pant, mass=0)
+    # lower legs (hanging down)
+    for ls2 in [-1, 1]:
+        bb.createBody(shape="box", halfExtent=[0.035, 0.035, 0.16],
+            position=[px2+ls2*0.06, py2-0.18, 0.28], color=pant, mass=0)
+    # feet/shoes
+    for ls3 in [-1, 1]:
+        bb.createBody(shape="box", halfExtent=[0.04, 0.05, 0.02],
+            position=[px2+ls3*0.06, py2-0.22, 0.12], color=0x333333, mass=0)
+    # arms
+    for as2 in [-1, 1]:
+        bb.createBody(shape="box", halfExtent=[0.03, 0.03, 0.14],
+            position=[px2+as2*0.14, py2, 0.58], color=shirt, mass=0)
+        bb.createBody(shape="box", halfExtent=[0.025, 0.025, 0.025],
+            position=[px2+as2*0.14, py2-0.02, 0.43], color=skin, mass=0)
+
+# ── Coffee table in waiting area ──────────────────────────────
+for ctx, cty in [(REC_CX-0.5, REC_CY), (REC_CX+1.8, REC_CY)]:
+    bb.createBody(shape="box", halfExtent=[0.35, 0.25, 0.02],
+        position=[ctx, cty, 0.38], color=0x8b6343, mass=0)
+    for tlx4, tly4 in [(-0.28,-0.18),(0.28,-0.18),(-0.28,0.18),(0.28,0.18)]:
+        bb.createBody(shape="box", halfExtent=[0.025, 0.025, 0.18],
+            position=[ctx+tlx4, cty+tly4, 0.18], color=0x5c4033, mass=0)
+    # magazines on table
+    for mg in range(3):
+        bb.createBody(shape="box", halfExtent=[0.06, 0.04, 0.003],
+            position=[ctx-0.10+mg*0.10, cty, 0.405], color=[0xcc4444,0x4488cc,0xff8800][mg], mass=0)
+
+# ── Water dispenser ──────────────────────────────────────────
+WD_X = REC_CX - 3.5; WD_Y = REC_CY + REC_W/2 - 0.5
+bb.createBody(shape="box", halfExtent=[0.15, 0.15, 0.55],
+    position=[WD_X, WD_Y, 0.55], color=0xf0f0f0, mass=0)
+bb.createBody(shape="box", halfExtent=[0.14, 0.14, 0.02],
+    position=[WD_X, WD_Y, 1.12], color=0xdddddd, mass=0)
+# water bottle on top
+bb.createBody(shape="box", halfExtent=[0.08, 0.08, 0.16],
+    position=[WD_X, WD_Y, 1.28], color=0x88ccff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.06, 0.06, 0.02],
+    position=[WD_X, WD_Y, 1.12], color=0x88ccff, mass=0)
+# taps
+bb.createBody(shape="box", halfExtent=[0.025, 0.02, 0.025],
+    position=[WD_X, WD_Y-0.16, 0.85], color=0xcc2222, mass=0)
+bb.createBody(shape="box", halfExtent=[0.025, 0.02, 0.025],
+    position=[WD_X+0.06, WD_Y-0.16, 0.85], color=0x2222cc, mass=0)
+# drip tray
+bb.createBody(shape="box", halfExtent=[0.08, 0.06, 0.015],
+    position=[WD_X+0.03, WD_Y-0.16, 0.70], color=0xaaaaaa, mass=0)
+
+# ── Potted plants ────────────────────────────────────────────
+for ppx, ppy in [(REC_CX-3.8, REC_CY-3.2), (REC_CX-3.8, REC_CY+3.2),
+                 (REC_CX+3.8, REC_CY-3.2)]:
+    bb.createBody(shape="box", halfExtent=[0.12, 0.12, 0.15],
+        position=[ppx, ppy, 0.15], color=0x8b4513, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.10, 0.10, 0.005],
+        position=[ppx, ppy, 0.30], color=0x5c3a1a, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.15, 0.15, 0.12],
+        position=[ppx, ppy, 0.42], color=0x228b22, mass=0)
+    bb.createBody(shape="box", halfExtent=[0.10, 0.10, 0.08],
+        position=[ppx, ppy, 0.56], color=0x2da02d, mass=0)
+
+# ── Information board on wall ─────────────────────────────────
+bb.createBody(shape="box", halfExtent=[0.55, 0.025, 0.40],
+    position=[REC_CX-1.5, REC_CY-REC_W/2+0.025, 1.8], color=0x8b6343, mass=0)
+bb.createBody(shape="box", halfExtent=[0.52, 0.015, 0.37],
+    position=[REC_CX-1.5, REC_CY-REC_W/2+0.04, 1.8], color=0xeeeedd, mass=0)
+# notices pinned
+for nk in range(4):
+    bb.createBody(shape="box", halfExtent=[0.10, 0.008, 0.12],
+        position=[REC_CX-1.9+nk*0.26, REC_CY-REC_W/2+0.05, 1.85],
+        color=[0xffeeaa,0xaaddff,0xffbbbb,0xbbffbb][nk], mass=0)
+    bb.createBody(shape="box", halfExtent=[0.008, 0.008, 0.008],
+        position=[REC_CX-1.9+nk*0.26, REC_CY-REC_W/2+0.06, 1.97],
+        color=[0xff2222,0x2222ff,0xff8800,0x22aa22][nk], mass=0)
+
+# ── Wall clock in reception ──────────────────────────────────
+bb.createBody(shape="box", halfExtent=[0.16, 0.03, 0.16],
+    position=[REC_CX, REC_CY+REC_W/2-0.06, 2.8], color=0xffffff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.005, 0.022, 0.08],
+    position=[REC_CX, REC_CY+REC_W/2-0.032, 2.84], color=0x333333, mass=0)
+bb.createBody(shape="box", halfExtent=[0.07, 0.022, 0.005],
+    position=[REC_CX+0.04, REC_CY+REC_W/2-0.032, 2.8], color=0x333333, mass=0)
+
+# ── TV Screen on wall ────────────────────────────────────────
+bb.createBody(shape="box", halfExtent=[0.55, 0.03, 0.35],
+    position=[REC_CX+2.0, REC_CY+REC_W/2-0.03, 2.2], color=0x111111, mass=0)
+bb.createBody(shape="box", halfExtent=[0.52, 0.015, 0.32],
+    position=[REC_CX+2.0, REC_CY+REC_W/2-0.04, 2.2], color=0x002244, mass=0)
+for tvk in range(3):
+    bb.createBody(shape="box", halfExtent=[0.44, 0.005, 0.008],
+        position=[REC_CX+2.0, REC_CY+REC_W/2-0.055, 2.0+tvk*0.12], color=0x00aaff, mass=0)
+bb.createBody(shape="box", halfExtent=[0.20, 0.005, 0.05],
+    position=[REC_CX+2.0, REC_CY+REC_W/2-0.055, 2.38], color=0xff6600, mass=0)
+
+# ============================================================
+# ROBOT DOG  (Spot URDF — walks around reception)
+# ============================================================
+SPOT_START_X = REC_CX; SPOT_START_Y = REC_CY
+spot_orn = bb.getQuaternionFromEuler([0, 0, 0])
+spot_robot = bb.loadURDF(
+    'spot.urdf', position=[SPOT_START_X, SPOT_START_Y, 0.75],
+    fixedBase=False
+)
+
+# Joint IDs for Spot
+SPOT_FL_HIP  = 1;  SPOT_FL_KNEE  = 2
+SPOT_FR_HIP  = 4;  SPOT_FR_KNEE  = 5
+SPOT_RL_HIP  = 7;  SPOT_RL_KNEE  = 8
+SPOT_RR_HIP  = 10; SPOT_RR_KNEE  = 11
+
+# Gait parameters
+SPOT_TAU = 8
+SPOT_HIP_BASE    = 1.0
+SPOT_KNEE_BASE   = -1.8
+SPOT_HIP_SWING   = 0.5
+SPOT_KNEE_SWING  = 0.8
+SPOT_PHASE_DELAY = math.pi / 2
+spot_step_i = 0
+
+# Patrol waypoints inside reception room
+SPOT_PATROL = [
+    [REC_CX - 3.0, REC_CY - 1.0],
+    [REC_CX - 3.0, REC_CY + 1.0],
+    [REC_CX,        REC_CY + 2.5],
+    [REC_CX + 3.0,  REC_CY + 1.0],
+    [REC_CX + 3.0,  REC_CY - 1.0],
+    [REC_CX,        REC_CY - 2.5],
+]
+spot_wp = 0
+spot_x = SPOT_START_X; spot_y = SPOT_START_Y
+SPOT_WALK_SPEED = 0.012
+
+def animate_spot_dog():
+    """Animate Spot's legs with a walking gait and move along patrol path."""
+    global spot_step_i, spot_wp, spot_x, spot_y
+
+    spot_step_i += 1
+
+    # Front legs
+    hip_f = SPOT_HIP_BASE + SPOT_HIP_SWING * math.sin(spot_step_i / SPOT_TAU)
+    knee_f = SPOT_KNEE_BASE + SPOT_KNEE_SWING * math.cos(spot_step_i / SPOT_TAU)
+    for ji in [SPOT_FL_HIP, SPOT_FR_HIP]:
+        bb.setJointMotorControl(spot_robot, ji, targetPosition=hip_f)
+    for ji in [SPOT_FL_KNEE, SPOT_FR_KNEE]:
+        bb.setJointMotorControl(spot_robot, ji, targetPosition=knee_f)
+
+    # Rear legs (phase-delayed)
+    hip_r = SPOT_HIP_BASE + SPOT_HIP_SWING * math.sin(spot_step_i / SPOT_TAU + SPOT_PHASE_DELAY)
+    knee_r = SPOT_KNEE_BASE + SPOT_KNEE_SWING * math.cos(spot_step_i / SPOT_TAU + SPOT_PHASE_DELAY)
+    for ji in [SPOT_RL_HIP, SPOT_RR_HIP]:
+        bb.setJointMotorControl(spot_robot, ji, targetPosition=hip_r)
+    for ji in [SPOT_RL_KNEE, SPOT_RR_KNEE]:
+        bb.setJointMotorControl(spot_robot, ji, targetPosition=knee_r)
+
+    # Move toward current waypoint
+    tgt_x, tgt_y = SPOT_PATROL[spot_wp]
+    dx = tgt_x - spot_x; dy = tgt_y - spot_y
+    dist = math.sqrt(dx*dx + dy*dy)
+    if dist < 0.3:
+        spot_wp = (spot_wp + 1) % len(SPOT_PATROL)
+    elif dist > 0.01:
+        spot_x += (dx/dist) * SPOT_WALK_SPEED
+        spot_y += (dy/dist) * SPOT_WALK_SPEED
+        heading = math.atan2(dy, dx) - math.pi/2
+        try:
+            bb.resetBasePose(spot_robot,
+                [spot_x, spot_y, 0.75],
+                bb.getQuaternionFromEuler([0, 0, heading]))
+        except: pass
+
+# ============================================================
+# ANIMATION: MRI Scanner
+# ============================================================
+def animate_mri(t):
+    qI = [0, 0, 0, 1]
+    cycle_t = (t % MRI_SCAN_CYCLE) / MRI_SCAN_CYCLE  # 0..1
+
+    # Table slides: out for 0-0.25, sliding in 0.25-0.40, inside 0.40-0.75, sliding out 0.75-0.90, out 0.90-1.0
+    if cycle_t < 0.25:
+        table_x = MRI_TABLE_OUT
+    elif cycle_t < 0.40:
+        frac = (cycle_t - 0.25) / 0.15
+        table_x = MRI_TABLE_OUT + (MRI_TABLE_IN - MRI_TABLE_OUT) * frac
+    elif cycle_t < 0.75:
+        table_x = MRI_TABLE_IN
+    elif cycle_t < 0.90:
+        frac = (cycle_t - 0.75) / 0.15
+        table_x = MRI_TABLE_IN + (MRI_TABLE_OUT - MRI_TABLE_IN) * frac
+    else:
+        table_x = MRI_TABLE_OUT
+
+    try:
+        bb.resetBasePose(mri_table_base, [table_x, MRI_Y, 0.50], qI)
+        bb.resetBasePose(mri_table_pad, [table_x, MRI_Y, 0.57], qI)
+        bb.resetBasePose(mri_table_rail_L, [table_x, MRI_Y-0.22, 0.48], qI)
+        bb.resetBasePose(mri_table_rail_R, [table_x, MRI_Y+0.22, 0.48], qI)
+        bb.resetBasePose(mri_patient_torso, [table_x, MRI_Y, 0.67], qI)
+        bb.resetBasePose(mri_patient_head, [table_x+0.20, MRI_Y, 0.72], qI)
+        bb.resetBasePose(mri_patient_legs, [table_x-0.40, MRI_Y, 0.65], qI)
+    except: pass
+
+    # Ring rotation (only when scanning — table is inside)
+    scanning = 0.40 <= cycle_t <= 0.75
+    if scanning:
+        ring_angle = t * MRI_RING_SPEED
+        r = 0.40  # ring radius
+        # 4-point cross rotating around bore axis (X-axis)
+        cos_a = math.cos(ring_angle)
+        sin_a = math.sin(ring_angle)
+        ry1 = MRI_Y + r * cos_a
+        rz1 = 0.90 + r * sin_a
+        ry2 = MRI_Y - r * sin_a
+        rz2 = 0.90 + r * cos_a
+        try:
+            q_r1 = bb.getQuaternionFromEuler([ring_angle, 0, 0])
+            bb.resetBasePose(mri_ring_H, [MRI_X, MRI_Y, 0.90], q_r1)
+            bb.resetBasePose(mri_ring_V, [MRI_X, MRI_Y, 0.90], q_r1)
+            q_r2 = bb.getQuaternionFromEuler([ring_angle+0.3, 0, 0])
+            bb.resetBasePose(mri_ring2_H, [MRI_X+0.15, MRI_Y, 0.90], q_r2)
+            bb.resetBasePose(mri_ring2_V, [MRI_X+0.15, MRI_Y, 0.90], q_r2)
+        except: pass
+
+        # scan line on console sweeps up/down
+        scan_frac = (t * 0.8) % 2.0
+        if scan_frac > 1.0:
+            scan_frac = 2.0 - scan_frac
+        scan_z = 1.02 + scan_frac * 0.32
+        try:
+            bb.resetBasePose(mri_scan_line, [MRI_CON_X, MRI_CON_Y-0.30, scan_z], qI)
+        except: pass
+
+        # pulsing status LED
+        led_on = int(t * 4) % 2 == 0
+        try:
+            bb.resetBasePose(mri_status_led,
+                [MRI_CON_X+0.35, MRI_CON_Y-0.18, 0.84], qI)
+        except: pass
+    else:
+        # rings hidden (off to side when not scanning)
+        try:
+            bb.resetBasePose(mri_ring_H, [MRI_X, MRI_Y, 0.90], qI)
+            bb.resetBasePose(mri_ring_V, [MRI_X, MRI_Y, 0.90], qI)
+            bb.resetBasePose(mri_ring2_H, [MRI_X+0.15, MRI_Y, 0.90], qI)
+            bb.resetBasePose(mri_ring2_V, [MRI_X+0.15, MRI_Y, 0.90], qI)
+        except: pass
+
+
+# ============================================================
+# ANIMATION: X-Ray Machine
+# ============================================================
+def animate_xray(t):
+    qI = [0, 0, 0, 1]
+
+    # Arm swings back and forth over the patient
+    swing = math.sin(t * XR_ARM_SWING_SPEED) * XR_ARM_RANGE
+    arm_tip_x = XR_X + 0.4 + swing
+    arm_mid_x = XR_X + 0.2 + swing * 0.5
+
+    try:
+        bb.resetBasePose(xr_arm, [arm_mid_x, XR_Y, 2.30], qI)
+        bb.resetBasePose(xr_head, [arm_tip_x, XR_Y, 2.22], qI)
+        # detector panel tracks under the arm
+        bb.resetBasePose(xr_detector, [arm_tip_x, XR_Y, 0.72], qI)
+    except: pass
+
+    # Exposure pulse (beam appears periodically)
+    cycle_pos = t % XR_EXPOSE_INTERVAL
+    exposing = cycle_pos < XR_EXPOSE_DURATION
+
+    if exposing:
+        # beam visible between head and detector
+        beam_z = (2.14 + 0.72) / 2
+        beam_half_h = (2.14 - 0.72) / 2
+        try:
+            bb.resetBasePose(xr_beam, [arm_tip_x, XR_Y, beam_z], qI)
+        except: pass
+        # flash red LED
+        try:
+            bb.resetBasePose(xr_expose_led,
+                [XR_CTRL_X+0.18, XR_CTRL_Y-0.10, 1.14], qI)
+        except: pass
+    else:
+        # hide beam underground
+        try:
+            bb.resetBasePose(xr_beam, [XR_X, XR_Y, -5.0], qI)
+        except: pass
+
+
+# ============================================================
+# ANIMATION: Outside flashing lights & beacon
+# ============================================================
+def animate_outside(t):
+    qI = [0, 0, 0, 1]
+
+    # Ambulance alternating red/blue lights
+    flash = int(t * 3) % 2
+    try:
+        if flash == 0:
+            bb.resetBasePose(amb_light_L,
+                [AMB_X-0.75, AMB_Y-0.15, 1.24], qI)
+            bb.resetBasePose(amb_light_R,
+                [AMB_X-0.75, AMB_Y+0.15, -5.0], qI)
+        else:
+            bb.resetBasePose(amb_light_L,
+                [AMB_X-0.75, AMB_Y-0.15, -5.0], qI)
+            bb.resetBasePose(amb_light_R,
+                [AMB_X-0.75, AMB_Y+0.15, 1.24], qI)
+    except: pass
+
+    # Helipad beacon rotation
+    beacon_angle = t * 1.5
+    bx2 = HELI_X + 0.3 * math.cos(beacon_angle)
+    by2 = HELI_Y + 0.3 * math.sin(beacon_angle)
+    pulse = 0.5 + 0.5 * math.sin(t * 4)
+    try:
+        bb.resetBasePose(heli_beacon, [bx2, by2, 0.06], qI)
+    except: pass
+
+
+# ============================================================
+# DEBUG CONTROLS
+# ============================================================
+
+# --- Moveable-object sliders ---
+bb.addDebugSlider('bed_X', BED_AX, -3.0, 3.0)
+bb.addDebugSlider('bed_Y', BED_AY, -3.0, 3.0)
+bb.addDebugSlider('base_X', RBX, -3.0, 3.0)
+bb.addDebugSlider('base_Y', RBY, -3.0, 1.0)
+bb.addDebugSlider('iv_X', IVX, -4.0, 4.0)
+bb.addDebugSlider('iv_Y', IVY, -3.5, 3.5)
+bb.addDebugSlider('cart_X', CCX, -4.0, 4.5)
+bb.addDebugSlider('cart_Y', CCY, -3.5, 3.5)
+bb.addDebugSlider('o2_X', OXX, -4.0, 4.0)
+bb.addDebugSlider('o2_Y', OXY, -3.5, 3.5)
+bb.addDebugSlider('mon_X', MNX, -4.0, 4.0)
+bb.addDebugSlider('mon_Y', MNY, -3.5, 3.5)
+
+# --- Arm manual control ---
+bb.addDebugSlider('ee_X', LOC_A[0], -1.5, 1.5)
+bb.addDebugSlider('ee_Y', LOC_A[1], -2.5, 1.0)
+bb.addDebugSlider('ee_Z', LOC_A[2],  0.1, 1.6)
+bb.addDebugButton('MoveArm')
+bb.addDebugButton('GripOpen')
+bb.addDebugButton('GripClose')
+
+# --- Auto pick-and-drop ---
+bb.addDebugButton('PickAndDrop')
+bb.addDebugButton('ResetCube')
+
+goal_frame = bb.createDebugFrame(position=LOC_A)
+
+# ============================================================
+# ARM HELPERS
+# ============================================================
+HOME_JP = [0, -0.4, 0.0, -1.65, 0.0, 1.48, 0.785]
+DQ      = bb.getQuaternionFromEuler([math.pi, 0, 0])
+CARRY   = 0.055
+
+def arm_home():
+    for i, v in enumerate(HOME_JP):
+        bb.setJointMotorControl(robot, i, targetPosition=v)
+
+def ik_move(px, py, pz):
+    jp = bb.calculateInverseKinematics(robot, ee_link, [px, py, pz], DQ)
+    for i in range(min(7, len(jp))):
+        bb.setJointMotorControl(robot, i, targetPosition=jp[i])
+
+def get_ee_pos():
+    """Get current end-effector position."""
+    try:
+        ep, _ = bb.getLinkPose(robot, ee_link)
+        return list(ep)
+    except:
+        return [0.0, 0.0, 0.5]
+
+def smooth_ease(t):
+    """Smooth-step ease-in-out: 3t^2 - 2t^3"""
+    t = max(0.0, min(1.0, t))
+    return t * t * (3.0 - 2.0 * t)
+
+def lerp3(a, b, t):
+    """Linearly interpolate between two 3D points."""
+    s = smooth_ease(t)
+    return [a[0]+(b[0]-a[0])*s, a[1]+(b[1]-a[1])*s, a[2]+(b[2]-a[2])*s]
+
+arm_home()
+open_grip()
+
+# ============================================================
+# PICK-AND-PLACE SEQUENCE  (smooth interpolation)
+# ============================================================
+HOLD_S = 50; HOLD_M = 100; HOLD_L = 180
+
+# Step types: "move" = smooth IK interpolation, "action" = instant (grip/home)
+def make_sequence(pick_loc, drop_loc):
+    px, py, pz = pick_loc
+    dx, dy, dz = drop_loc
+    above_pick = pz + 0.16
+    at_pick    = pz + 0.005
+    carry_h    = max(above_pick + 0.08, dz + 0.22)
+    above_drop = dz + 0.16
+    at_drop    = dz + 0.005
+    home_pos   = [0.3, -0.5, 0.7]  # approximate home EE position
+    return [
+        ("HOME",       "action", lambda: arm_home(),     home_pos,                           HOLD_M),
+        ("OPEN",       "action", lambda: open_grip(),    None,                                HOLD_S),
+        ("ABOVE_PICK", "move",   None, [px, py, above_pick],                                  HOLD_L),
+        ("TO_PICK",    "move",   None, [px, py, at_pick],                                     HOLD_L),
+        ("GRIP",       "action", lambda: close_grip(),   None,                                HOLD_M),
+        ("LIFT",       "move",   None, [px, py, carry_h],                                     HOLD_L),
+        ("TRANSIT",    "move",   None, [(px+dx)/2, (py+dy)/2, carry_h+0.05],                  HOLD_L),
+        ("ABOV_DROP",  "move",   None, [dx, dy, above_drop],                                  HOLD_L),
+        ("TO_DROP",    "move",   None, [dx, dy, at_drop],                                     HOLD_L),
+        ("RELEASE",    "action", lambda: open_grip(),    None,                                HOLD_M),
+        ("RETREAT",    "move",   None, [dx, dy, above_drop],                                  HOLD_L),
+        ("HOME_END",   "action", lambda: arm_home(),     home_pos,                           HOLD_M),
+    ]
+
+CARRY_STEPS = {"GRIP","LIFT","TRANSIT","ABOV_DROP","TO_DROP"}
+
+seq        = None
+step_idx   = 0
+step_timer = 0
+step_start_pos = None  # captured EE position at start of each smooth move
+gripped    = False
+cube_at_A  = True
+auto_running = False
+
+old_move_btn       = 0
+old_grip_open_btn  = 0
+old_grip_close_btn = 0
+old_pick_btn       = 0
+old_reset_btn      = 0
+status_txt  = None
+prev_label  = ""
+
+# Smooth manual-move state
+manual_moving    = False
+manual_start_pos = None
+manual_target    = None
+manual_frames    = 0
+manual_frame_max = 180
+
+sim_time = 0.0
+
+# Track previous slider values so we only reposition when changed
+prev_bed_x = BED_AX;  prev_bed_y = BED_AY
+prev_base_x = RBX;    prev_base_y = RBY
+prev_iv_x = IVX;      prev_iv_y = IVY
+prev_cart_x = CCX;    prev_cart_y = CCY
+prev_o2_x = OXX;      prev_o2_y = OXY
+prev_mon_x = MNX;     prev_mon_y = MNY
+
+# ============================================================
+# ANIMATION HELPERS
+# ============================================================
+def animate_surgical_robot(t):
+    qI = bb.getQuaternionFromEuler([0, 0, 0])
+    tower_x = SRX;  tower_y = SRY + 0.75;  tower_top_z = 1.90
+    table_z = 0.81
+
+    a1 = t * 0.6
+    tip1_x = SRX + math.sin(a1)*0.12 - 0.08
+    tip1_y = SRY + math.cos(a1*0.7)*0.08
+    tip1_z = table_z + 0.02
+    sh1 = [tower_x-0.15, tower_y, tower_top_z]
+    mid1 = [(sh1[0]+tip1_x)/2, (sh1[1]+tip1_y)/2, (sh1[2]+tip1_z)/2+0.15]
+    try:
+        bb.resetBasePose(s1_shoulder, sh1, qI)
+        bb.resetBasePose(s1_upper, mid1, qI)
+        bb.resetBasePose(s1_lower, [(mid1[0]+tip1_x)/2,(mid1[1]+tip1_y)/2,(mid1[2]+tip1_z)/2], qI)
+        bb.resetBasePose(s1_tool, [tip1_x, tip1_y, tip1_z+0.10], qI)
+        g = 0.012+0.008*math.sin(t*2.5)
+        bb.resetBasePose(s1_grip_L, [tip1_x, tip1_y-g, tip1_z], qI)
+        bb.resetBasePose(s1_grip_R, [tip1_x, tip1_y+g, tip1_z], qI)
+    except: pass
+
+    a2 = t * 0.5 + 2.0
+    tip2_x = SRX + math.sin(a2)*0.10 + 0.08
+    tip2_y = SRY + math.cos(a2*0.8)*0.10
+    tip2_z = table_z + 0.03
+    sh2 = [tower_x+0.15, tower_y, tower_top_z]
+    mid2 = [(sh2[0]+tip2_x)/2, (sh2[1]+tip2_y)/2, (sh2[2]+tip2_z)/2+0.15]
+    try:
+        bb.resetBasePose(s2_shoulder, sh2, qI)
+        bb.resetBasePose(s2_upper, mid2, qI)
+        bb.resetBasePose(s2_lower, [(mid2[0]+tip2_x)/2,(mid2[1]+tip2_y)/2,(mid2[2]+tip2_z)/2], qI)
+        bb.resetBasePose(s2_tool, [tip2_x, tip2_y, tip2_z+0.10], qI)
+        g2 = 0.012+0.006*math.sin(t*3.0+1.0)
+        bb.resetBasePose(s2_grip_L, [tip2_x, tip2_y-g2, tip2_z], qI)
+        bb.resetBasePose(s2_grip_R, [tip2_x, tip2_y+g2, tip2_z], qI)
+    except: pass
+
+    cam_x = SRX + math.sin(t*0.3)*0.05
+    cam_y = SRY + math.cos(t*0.25)*0.04
+    cam_z = table_z + 0.30
+    try:
+        bb.resetBasePose(s3_shoulder, [tower_x, tower_y, tower_top_z], qI)
+        bb.resetBasePose(s3_boom, [(tower_x+cam_x)/2,(tower_y+cam_y)/2,(tower_top_z+cam_z)/2], qI)
+        bb.resetBasePose(s3_cam, [cam_x, cam_y, cam_z], qI)
+        bb.resetBasePose(s3_lens, [cam_x, cam_y, cam_z-0.05], qI)
+    except: pass
+
+
+def animate_lokomat(t):
+    global belt_offset
+    qI = bb.getQuaternionFromEuler([0, 0, 0])
+    hip_z = LK_HIP_HEIGHT
+
+    for side, sign, thigh_b, shank_b, foot_b, knee_m in [
+        ("L", -1, lk_L_thigh, lk_L_shank, lk_L_foot, lk_L_knee_motor),
+        ("R",  1, lk_R_thigh, lk_R_shank, lk_R_foot, lk_R_knee_motor),
+    ]:
+        ph = t * LK_GAIT_SPEED + (0.0 if side=="L" else math.pi)
+        hip_a = LK_HIP_AMP * math.sin(ph)
+        knee_b = LK_KNEE_AMP * max(0, math.sin(ph - 0.5))
+
+        knee_x = LKX + LK_THIGH_LEN * math.sin(hip_a)
+        knee_z = hip_z - LK_THIGH_LEN * math.cos(hip_a)
+        total_a = hip_a + knee_b
+        ankle_x = knee_x + LK_SHANK_LEN * math.sin(total_a)
+        ankle_z = knee_z - LK_SHANK_LEN * math.cos(total_a)
+        lat = sign * 0.10
+
+        try:
+            q_th = bb.getQuaternionFromEuler([0, -hip_a, 0])
+            bb.resetBasePose(thigh_b, [(LKX+knee_x)/2, LKY+lat, (hip_z+knee_z)/2], q_th)
+            q_sh = bb.getQuaternionFromEuler([0, -total_a, 0])
+            bb.resetBasePose(shank_b, [(knee_x+ankle_x)/2, LKY+lat, (knee_z+ankle_z)/2], q_sh)
+            bb.resetBasePose(foot_b, [ankle_x, LKY+lat, ankle_z-0.02], qI)
+            bb.resetBasePose(knee_m, [knee_x, LKY+lat-0.04, knee_z], q_th)
+        except: pass
+
+    belt_offset += LK_BELT_SPEED
+    if belt_offset > 0.16:
+        belt_offset -= 0.16
+    for i, bm_body in enumerate(belt_markers):
+        bx = LKX - 0.40 + i*0.16 + belt_offset
+        if bx > LKX + 0.48:
+            bx -= 0.96
+        try:
+            bb.resetBasePose(bm_body, [bx, LKY, 0.254], qI)
+        except: pass
+
+# ============================================================
+# MAIN LOOP
+# ============================================================
+while True:
+    bb.stepSimulation(DT)
+    step_timer += 1
+    sim_time += DT
+
+    # ── Vacuum robot ──────────────────────────────────────────
+    tgt = vac_path[vac_wp]
+    dvx = tgt[0]-vac_x; dvy = tgt[1]-vac_y
+    d   = math.sqrt(dvx*dvx+dvy*dvy)
+    if d < 0.15:
+        vac_wp = (vac_wp+1) % len(vac_path)
+    else:
+        vac_x += (dvx/d)*vac_spd; vac_y += (dvy/d)*vac_spd
+        ang = math.atan2(dvy,dvx)
+        try:
+            bb.resetBasePose(vac_body,[vac_x,vac_y,0.045],
+                bb.getQuaternionFromEuler([0,0,ang]))
+            bb.resetBasePose(vac_light,[vac_x,vac_y,0.14],
+                bb.getQuaternionFromEuler([0,0,ang]))
+        except: pass
+
+    # ── Animations ────────────────────────────────────────────
+    animate_surgical_robot(sim_time)
+    animate_lokomat(sim_time)
+    animate_outside(sim_time)
+
+    # ── Imaging Room animations (togglable) ───────────────────
+    try:
+        if bb.readDebugParameter('MRI_Active'):
+            animate_mri(sim_time)
+    except: pass
+    try:
+        if bb.readDebugParameter('XRay_Active'):
+            animate_xray(sim_time)
+    except: pass
+
+    # ── Robot Dog patrol in reception ─────────────────────────
+    try:
+        animate_spot_dog()
+    except: pass
+
+    # ── READ MOVEABLE-OBJECT SLIDERS ──────────────────────────
+    cur_bed_x  = bb.readDebugParameter('bed_X')
+    cur_bed_y  = bb.readDebugParameter('bed_Y')
+    cur_base_x = bb.readDebugParameter('base_X')
+    cur_base_y = bb.readDebugParameter('base_Y')
+    cur_iv_x   = bb.readDebugParameter('iv_X')
+    cur_iv_y   = bb.readDebugParameter('iv_Y')
+    cur_cart_x = bb.readDebugParameter('cart_X')
+    cur_cart_y = bb.readDebugParameter('cart_Y')
+    cur_o2_x   = bb.readDebugParameter('o2_X')
+    cur_o2_y   = bb.readDebugParameter('o2_Y')
+    cur_mon_x  = bb.readDebugParameter('mon_X')
+    cur_mon_y  = bb.readDebugParameter('mon_Y')
+
+    # ── REPOSITION MOVEABLE GROUPS ────────────────────────────
+    # Bed
+    if abs(cur_bed_x - prev_bed_x) > 0.001 or abs(cur_bed_y - prev_bed_y) > 0.001:
+        reposition_group(bed_parts, cur_bed_x, cur_bed_y, BED_AX, BED_AY)
+        prev_bed_x = cur_bed_x; prev_bed_y = cur_bed_y
+
+    # Robot base + tray (move URDF + decoration)
+    if abs(cur_base_x - prev_base_x) > 0.001 or abs(cur_base_y - prev_base_y) > 0.001:
+        reposition_group(robo_parts, cur_base_x, cur_base_y, RBX, RBY)
+        try:
+            bb.resetBasePose(robot,
+                [cur_base_x, cur_base_y, RBZ], robo_orn)
+        except: pass
+        prev_base_x = cur_base_x; prev_base_y = cur_base_y
+
+    # IV Stand
+    if abs(cur_iv_x - prev_iv_x) > 0.001 or abs(cur_iv_y - prev_iv_y) > 0.001:
+        reposition_group(iv_parts, cur_iv_x, cur_iv_y, IVX, IVY)
+        prev_iv_x = cur_iv_x; prev_iv_y = cur_iv_y
+
+    # Crash Cart
+    if abs(cur_cart_x - prev_cart_x) > 0.001 or abs(cur_cart_y - prev_cart_y) > 0.001:
+        reposition_group(cart_parts, cur_cart_x, cur_cart_y, CCX, CCY)
+        prev_cart_x = cur_cart_x; prev_cart_y = cur_cart_y
+
+    # Oxygen Tank
+    if abs(cur_o2_x - prev_o2_x) > 0.001 or abs(cur_o2_y - prev_o2_y) > 0.001:
+        reposition_group(o2_parts, cur_o2_x, cur_o2_y, OXX, OXY)
+        prev_o2_x = cur_o2_x; prev_o2_y = cur_o2_y
+
+    # Monitor
+    if abs(cur_mon_x - prev_mon_x) > 0.001 or abs(cur_mon_y - prev_mon_y) > 0.001:
+        reposition_group(mon_parts, cur_mon_x, cur_mon_y, MNX, MNY)
+        prev_mon_x = cur_mon_x; prev_mon_y = cur_mon_y
+
+    # ── READ BUTTONS ──────────────────────────────────────────
+    new_pick_btn   = bb.readDebugParameter('PickAndDrop')
+    new_reset_btn  = bb.readDebugParameter('ResetCube')
+    new_grip_open  = bb.readDebugParameter('GripOpen')
+    new_grip_close = bb.readDebugParameter('GripClose')
+    new_move_btn   = bb.readDebugParameter('MoveArm')
+
+    # ── RESET CUBE — teleport back to tray ────────────────────
+    if new_reset_btn > old_reset_btn:
+        base_dx = cur_base_x - RBX
+        base_dy = cur_base_y - RBY
+        reset_pos = [LOC_A[0]+base_dx, LOC_A[1]+base_dy, LOC_A[2]]
+        try:
+            bb.resetBasePose(cube, reset_pos,
+                bb.getQuaternionFromEuler([0,0,0]))
+        except: pass
+        cube_at_A = True
+        auto_running = False
+        step_idx = 0; step_timer = 0; gripped = False
+        step_start_pos = None; manual_moving = False
+        open_grip()
+        arm_home()
+        old_reset_btn = new_reset_btn
+
+    # ── PICK-AND-DROP BUTTON — start auto cycle ───────────────
+    if new_pick_btn > old_pick_btn and not auto_running:
+        base_dx = cur_base_x - RBX
+        base_dy = cur_base_y - RBY
+        bed_dx  = cur_bed_x - BED_AX
+        bed_dy  = cur_bed_y - BED_AY
+
+        cur_pick = [LOC_A[0]+base_dx, LOC_A[1]+base_dy, LOC_A[2]]
+        cur_drop = [LOC_B[0]+bed_dx,  LOC_B[1]+bed_dy,  LOC_B[2]]
+
+        if cube_at_A:
+            seq = make_sequence(cur_pick, cur_drop)
+        else:
+            seq = make_sequence(cur_drop, cur_pick)
+
+        step_idx = 0; step_timer = 0; gripped = False
+        auto_running = True
+        prev_label = ""
+        old_pick_btn = new_pick_btn
+    else:
+        old_pick_btn = new_pick_btn
+
+    # ── AUTO MODE  (pick-and-drop cycle — smooth) ───────────────
+    if auto_running and seq is not None:
+        label, stype, action_fn, target_pos, hold = seq[step_idx]
+
+        if label != prev_label:
+            # capture start position for smooth interpolation
+            step_start_pos = get_ee_pos()
+            try:
+                if status_txt is not None:
+                    bb.removeDebugObject(status_txt)
+                direction = "TRAY->BED" if cube_at_A else ""
+                status_txt = bb.createDebugText(
+                    direction + " | " + label,
+                    [cur_base_x, cur_base_y-0.65, 1.55],
+                    color='green', size=1.0)
+            except: pass
+            prev_label = label
+
+        if stype == "action":
+            # instant actions: fire once, then wait
+            if step_timer == 1:
+                action_fn()
+                gripped = (label in CARRY_STEPS)
+        else:
+            # smooth IK move: interpolate every frame
+            frac = step_timer / max(1, hold)
+            interp = lerp3(step_start_pos, target_pos, frac)
+            ik_move(interp[0], interp[1], interp[2])
+            gripped = (label in CARRY_STEPS)
+
+        if step_timer >= hold:
+            # snap to exact target at end of move step
+            if stype == "move" and target_pos:
+                ik_move(target_pos[0], target_pos[1], target_pos[2])
+            step_timer = 0
+            step_idx  += 1
+            if step_idx >= len(seq):
+                cube_at_A = not cube_at_A
+                auto_running = False
+                gripped = False
+                step_idx = 0
+                step_start_pos = None
+                try:
+                    if status_txt is not None:
+                        bb.removeDebugObject(status_txt)
+                        status_txt = None
+                except: pass
+
+    elif not auto_running:
+        # ── MANUAL MODE (smooth) ─────────────────────────────
+        if step_timer > 0:
+            step_idx = 0; step_timer = 0; prev_label = ""
+            step_start_pos = None
+        try:
+            if status_txt is not None:
+                bb.removeDebugObject(status_txt)
+                status_txt = None
+        except: pass
+
+        ex = bb.readDebugParameter('ee_X')
+        ey = bb.readDebugParameter('ee_Y')
+        ez = bb.readDebugParameter('ee_Z')
+        try: bb.resetDebugObjectPose(goal_frame, [ex,ey,ez], DQ)
+        except: pass
+
+        if new_move_btn > old_move_btn:
+            manual_moving = True
+            manual_start_pos = get_ee_pos()
+            manual_target = [ex, ey, ez]
+            manual_frames = 0
+
+        # Smooth interpolation toward manual target
+        if manual_moving and manual_target is not None:
+            manual_frames += 1
+            frac = manual_frames / manual_frame_max
+            if frac >= 1.0:
+                ik_move(manual_target[0], manual_target[1], manual_target[2])
+                manual_moving = False
+            else:
+                interp = lerp3(manual_start_pos, manual_target, frac)
+                ik_move(interp[0], interp[1], interp[2])
+
+        if new_grip_open > old_grip_open_btn:
+            open_grip()
+            gripped = False
+
+        if new_grip_close > old_grip_close_btn:
+            close_grip()
+            gripped = True
+
+    old_move_btn       = new_move_btn
+    old_grip_open_btn  = new_grip_open
+    old_grip_close_btn = new_grip_close
+
+    # ── VISUAL FINGERS ────────────────────────────────────────
+    try:
+        ep, eo = bb.getLinkPose(robot, ee_link)
+        update_fingers(ep, eo, grip_spread)
+    except: pass
+
+    # ── CARRY CUBE (kinematic override while gripped) ─────────
+    if gripped:
+        try:
+            ep, eo = bb.getLinkPose(robot, ee_link)
+            bb.resetBasePose(cube, [ep[0], ep[1], ep[2]-CARRY], eo)
+        except: pass
+
+    time.sleep(DT)
